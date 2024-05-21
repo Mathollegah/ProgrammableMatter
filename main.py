@@ -8,14 +8,14 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 import numpy as np
 import random
 
-global_direction = 0
-
 load_file = "tests/hole.txt"
 store_file = "demofile.txt"
 #load_file = "demofile.txt"
 
 dodecahedrons = []
 global_start_node = None
+
+global_switch = False
 
 class Dodecahedron:
     def __init__(self, _x, _y, _z):
@@ -195,7 +195,7 @@ ax.set(zlim3d=(-5, 5), zlabel='Z')
 # Build configuration
 if load_file == "":
     dodecahedrons = [Dodecahedron(0,0,0)]
-    for i in range(140):
+    for i in range(10):
         x = random.choice(dodecahedrons)
 
         d = random.choice(x.directions)
@@ -326,13 +326,7 @@ class Simulator3D(ShowBase):
         ShowBase.__init__(self)
         simplepbr.init()
         self.accept('s', self.stop)
-
-        self.accept('u', self.move_direction_keybord_u)
-        self.accept('i', self.move_direction_keybord_i)
-        self.accept('k', self.move_direction_keybord_k)
-        self.accept('j', self.move_direction_keybord_j)
-        self.accept('h', self.move_direction_keybord_h)
-        self.accept('z', self.move_direction_keybord_z)
+        self.accept('q', self.switch_orientation)
 
         self.running = True
 
@@ -384,27 +378,9 @@ class Simulator3D(ShowBase):
         self.running = not self.running
         print("Pause")
 
-    def move_direction_keybord_u(self):
-        self.move_direction_keybord(0)
-
-    def move_direction_keybord_i(self):
-        self.move_direction_keybord(1)
-
-    def move_direction_keybord_k(self):
-        self.move_direction_keybord(2)
-
-    def move_direction_keybord_j(self):
-        self.move_direction_keybord(3)
-
-    def move_direction_keybord_h(self):
-        self.move_direction_keybord(4)
-
-    def move_direction_keybord_z(self):
-        self.move_direction_keybord(5)
-
-    def move_direction_keybord(self, x):
-        global global_direction
-        global_direction = x
+    def switch_orientation(self):
+        global global_switch
+        global_switch = True
 
     # Define a procedure to move the robot.
     def moveRobot(self, task):
@@ -514,10 +490,6 @@ class ShiftOrTake():
         self.removable_tile = None
 
     def move(self, directions, tile):
-        #print(self.state, self.removable_tile)
-        #if self.removable_tile != None:
-        #    print(self.removable_tile.x, self.removable_tile.y, self.removable_tile.z)
-
         #[(0, self.top), (1, self.bottom), (2, self.front), (3, self.back),
         # (4, self.upleft1), (5, self.upleft2), (6, self.upright1), (7, self.upright2),
         # (8, self.downleft1), (9, self.downleft2), (10, self.downright1), (11, self.downright2)]
@@ -590,6 +562,14 @@ class TraverseLayer():
         self.y = 0
         self.count = 0
 
+        self.bound_pos = (-100, -100)
+        self.north_pos = (-105, -105)
+        self.last_move_2 = 0
+        self.sec_to_last_move_2 = 0
+        self.sec_move = False
+
+        self.sec_start_pos = False
+
     def reset(self):
         self.state = 'find_boundary'
         self.start_pos = (0, 0)
@@ -600,6 +580,14 @@ class TraverseLayer():
         self.x = 0
         self.y = 0
         self.count = 0
+
+        self.bound_pos = (-100, -100)
+        self.north_pos = (-105, -105)
+        self.last_move_2 = 0
+        self.sec_to_last_move_2 = 0
+        self.sec_move = False
+
+        self.sec_start_pos = False
 
     def update_bounds(self, move):
         if move == 0:
@@ -655,6 +643,12 @@ class TraverseLayer():
             return -1
 
         if self.state == 'follow_boundary':
+            if (self.x, self.y) == self.start_pos and self.sec_start_pos:
+                self.state = 'terminate_completely'
+                return -1
+
+            self.sec_start_pos = True
+
             for i in range(6):
                 if (self.last_move-self.sec_to_last_move +3)%6 != 0:
                     tmp = (self.last_move - 1 + i) % 6
@@ -665,32 +659,58 @@ class TraverseLayer():
                     self.sec_to_last_move = self.last_move
                     self.last_move = tmp
                     self.update_bounds(tmp)
-                    if tmp != 0 and tmp != 3:
+                    if tmp != 0 and (self.x != self.north_pos[0]): #tmp != 0 and tmp != 3 and (self.x != self.north_pos[0])
                         self.state = 'north'
                         self.count = 0
+                        self.bound_pos = (self.x, self.y)
                     return possible_moves[tmp][0]
 
         if self.state == 'north':
+            self.sec_to_last_move_2 = 2
+            self.last_move_2 = 1
             if possible_moves[0][1]:
                 self.update_bounds(0)
                 self.count += 1
+                #self.sec_to_last_move_2 = self.last_move
+                #self.last_move_2 = possible_moves[0][0]
                 return possible_moves[0][0]
 
-            if (self.max[1]-self.y) >= 1:
-                self.count += 1
+            #if (self.max[1]-self.y) >= 1:
+            #    self.count += 1
+            #    self.state = 'terminate'
+            #    return possible_moves[0][0]
+
+            if self.bound_pos != (self.x, self.y):
+                self.north_pos = (self.x, self.y)
+                self.state = 'follow_new_boundary' # south xxxxxxxxxxx
+                self.sec_move = False
+            else:
+                self.state = 'follow_boundary'
+            return -1
+
+
+        if self.state == 'follow_new_boundary':
+            if (self.x, self.y) == self.bound_pos:
+                self.state = 'follow_boundary'
+                return -1
+
+            if (self.x, self.y) == self.north_pos and self.sec_move:
                 self.state = 'terminate'
-                return possible_moves[0][0]
+                return 0
 
-            self.state = 'south'
-            return -1
+            self.sec_move = True
 
-        if self.state == 'south':
-            if self.count > 0:
-                self.update_bounds(3)
-                self.count -= 1
-                return possible_moves[3][0]
-            self.state = 'follow_boundary'
-            return -1
+            for i in range(6):
+                if (self.last_move_2-self.sec_to_last_move_2 +3)%6 != 0:
+                    tmp = (self.last_move_2 - 1 + i) % 6
+                else:
+                    tmp = (self.last_move_2 - 2 + i) % 6
+
+                if possible_moves[tmp][1]:
+                    self.sec_to_last_move_2 = self.last_move_2
+                    self.last_move_2 = tmp
+                    self.update_bounds(tmp)
+                    return possible_moves[tmp][0]
 
         return -1
 
@@ -715,7 +735,6 @@ class MoveOnSurface():
         self.move_algorithm.reset()
 
     def take_move_decision(self):
-        print(self.state)
         # (0, north), (1, south), (2, westnorth), (3, westsouth), (4, eastnorth), (5, eastsouth)
         possible_moves = []
         for i in [0,5,3,1,2,4]:
@@ -724,12 +743,71 @@ class MoveOnSurface():
         tmp = self.move_algorithm.move(possible_moves)
         if self.move_algorithm.state == 'terminate':
             self.check_placing_flag = True
+
+        if self.move_algorithm.state == 'terminate_completely':
+            self.state = 'terminate_completely'
         return tmp
 
     def move(self, directions):
         self.check_placing_flag = False
 
         if self.state == 'move_bot':
+            if directions[2][1] == None:
+                if self.movable[0]:
+                    self.state = 'terminate'
+                    self.check_placing_flag = True
+                    return directions[2][0]
+
+            if directions[3][1] == None:
+                if self.movable[1]:
+                    self.state = 'terminate'
+                    self.check_placing_flag = True
+                    return directions[3][0]
+
+            if directions[4][1] == None:
+                if self.movable[2]:
+                    self.state = 'terminate'
+                    self.check_placing_flag = True
+                    return directions[4][0]
+
+            if directions[5][1] == None:
+                if self.movable[3]:
+                    self.state = 'terminate'
+                    self.check_placing_flag = True
+                    return directions[5][0]
+
+            if directions[6][1] == None:
+                if self.movable[4]:
+                    self.state = 'terminate'
+                    self.check_placing_flag = True
+                    return directions[6][0]
+
+            if directions[7][1] == None:
+                if self.movable[5]:
+                    self.state = 'terminate'
+                    self.check_placing_flag = True
+                    return directions[7][0]
+
+
+            if directions[2][1] != None:
+                self.movable[0] = True
+
+            if directions[3][1] != None:
+                self.movable[1] = True
+
+            if directions[4][1] != None or directions[8][1] != None:
+                self.movable[2] = True
+
+            if directions[5][1] != None or directions[9][1] != None:
+                self.movable[3] = True
+
+            if directions[6][1] != None or directions[10][1] != None:
+                self.movable[4] = True
+
+            if directions[7][1] != None or directions[11][1] != None:
+                self.movable[5] = True
+
+
             if directions[1][1] != None:
                 return directions[1][0]
             else:
@@ -767,6 +845,8 @@ class MoveOnSurface():
                 self.state = 'take_move'
 
         if self.state == 'take_move':
+            self.movable = [False, False, False, False, False, False]
+
             if self.move_algorithm.state == 'terminate':
                 self.check_placing_flag = True
                 self.state = 'terminate'
@@ -826,13 +906,35 @@ class MoveOnSurface():
             # go straight down
             return directions[1][0]
 
+        return -1
 
+class FindShiftableLine():
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.z = 0
+        self.tile_found = False
+
+    def find_tile(self):
+        global dodecahedrons
+        self.tile_found = False
+
+        for i in dodecahedrons:
+            tmp1 = (i.top != None) or (i.bottom != None)
+            tmp2 = (i.upleft1 != None) or (i.upleft2 != None) or (i.upright1 != None) or (i.upright2 != None)
+            tmp3 = (i.downleft1 != None) or (i.downleft2 != None) or (i.downright1 != None) or (i.downright2 != None)
+
+            if tmp1 or (tmp2 and tmp3):
+                self.x = i.x
+                self.y = i.y
+                self.z = i.z
+                self.tile_found = True
 
 
 class Robot():
     def __init__(self):
         global dodecahedrons
-        self.state = 'find_local_maximum'#'move_random'
+        self.state = 'find_shiftable_row'#'move_random'
         self.x = global_start_node.x
         self.y = global_start_node.y
         self.z = global_start_node.z
@@ -857,6 +959,7 @@ class Robot():
         self.shift_or_take = ShiftOrTake()
         self.shift_or_take.robot = self
         self.move_on_surface = MoveOnSurface()
+        self.find_shiftable_line = FindShiftableLine()
 
         # Neighbors
         self.top = None
@@ -1014,9 +1117,9 @@ class Robot():
 
         if pos == 15:
             #TODO: remove later
-            self.x = self.removable_tile.x
-            self.y = self.removable_tile.y
-            self.z = self.removable_tile.z
+            self.x = self.goto_x
+            self.y = self.goto_y
+            self.z = self.goto_z
 
         # update known box
         if self.x_max < self.x:
@@ -1044,7 +1147,8 @@ class Robot():
         return None
 
     def next_move(self):
-        #print(self.state, self.grabbed_tile, self.removable_tile)
+        print(self.state)
+        pos = -1
         self.detect_neighbors()
         directions = [(0, self.top), (1, self.bottom), (2, self.front), (3, self.back),
                       (4, self.upleft1), (5, self.upleft2), (6, self.upright1), (7, self.upright2),
@@ -1083,10 +1187,11 @@ class Robot():
             move_possible = False
             pos = self.move_on_surface.move(directions)
 
-            if self.move_on_surface.check_placing_flag and self.grabbed_tile != None or self.move_on_surface.move_algorithm.state == 'terminate': #xxxxxxxxx and False
-                if self.z_min <= self.z-1 or self.move_on_surface.move_algorithm.state == 'terminate':
-                    if pos == -1:
-                        pos = directions[1][0]
+            if self.move_on_surface.state == 'terminate_completely':
+                self.state = 'switch_orientation'
+
+            if self.grabbed_tile != None and self.move_on_surface.state == 'terminate':
+                if pos == -1:
                     self.move_on_surface.reset()
                     self.state = 'place_tile'
 
@@ -1101,6 +1206,11 @@ class Robot():
         if self.state == 'goto_removable_tile' and move_possible:
             #TODO: find path to tile
             move_possible = False
+
+            self.goto_x = self.removable_tile.x
+            self.goto_y = self.removable_tile.y
+            self.goto_z = self.removable_tile.z
+
             pos = 15
             self.state = 'grab_tile'
 
@@ -1108,19 +1218,50 @@ class Robot():
             move_possible = False
             pos = 12
             self.removable_tile = None
-            self.state = 'find_local_maximum'
+            self.state = 'find_shiftable_row'
             self.shift_or_take.reset()
 
         if self.state == 'move_one_step_down' and move_possible:
             move_possible = False
             pos = directions[1][0]
-            self.state = 'find_local_maximum'
+            self.state = 'find_shiftable_row'
 
         if self.state == 'find_shiftable_row' and move_possible:
             move_possible = False
+            self.find_shiftable_line.find_tile()
+            if self.find_shiftable_line.tile_found:
+                self.goto_x = self.find_shiftable_line.x
+                self.goto_y = self.find_shiftable_line.y
+                self.goto_z = self.find_shiftable_line.z
+                pos = 15
+                self.state = 'find_local_maximum'
+            else:
+                self.state = 'terminate'
 
 
-        self.act_move(pos)
+        if self.state == 'switch_orientation':
+            global global_switch
+            global dodecahedrons
+
+            if global_switch:
+                global_switch = False
+                for i in dodecahedrons:
+                    tmp = i.x
+                    i.x = i.z
+                    i.z = -tmp
+                    i.scene.setPos(i.x, i.y, i.z)
+
+                tmp = self.x
+                self.x = self.z
+                self.z = -tmp
+                self.state = 'find_shiftable_row'
+
+                for i in dodecahedrons:
+                    i.find_neighbours(dodecahedrons)
+                self.detect_neighbors()
+
+        if self.state != 'terminate':
+            self.act_move(pos)
 
 
 # Robot Motion End ----------------------------------------------------------------------
