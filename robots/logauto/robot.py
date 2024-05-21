@@ -2,7 +2,6 @@ from robots.logauto.states.FindLocalMaximum import *
 from robots.logauto.states.FindShiftableLine import *
 from robots.logauto.states.MoveOnSurface import *
 from robots.logauto.states.ShiftOrTake import *
-#from main import global_start_node
 import globalvars
 import random
 
@@ -315,12 +314,9 @@ class Robot():
 
 
         if self.state == 'switch_orientation':
-            global global_switch
-            global dodecahedrons
-
-            if global_switch:
-                global_switch = False
-                for i in dodecahedrons:
+            if globalvars.global_switch:
+                globalvars.global_switch = False
+                for i in globalvars.dodecahedrons:
                     tmp = i.x
                     i.x = i.z
                     i.z = -tmp
@@ -331,8 +327,8 @@ class Robot():
                 self.z = -tmp
                 self.state = 'find_shiftable_row'
 
-                for i in dodecahedrons:
-                    i.find_neighbours(dodecahedrons)
+                for i in globalvars.dodecahedrons:
+                    i.find_neighbours(globalvars.dodecahedrons)
                 self.detect_neighbors()
 
         if self.state != 'terminate':
