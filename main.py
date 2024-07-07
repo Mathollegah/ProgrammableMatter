@@ -1,9 +1,7 @@
 from math import pi, sin, cos
 import simplepbr
 import globalvars
-from robots.logauto.robot import *
 from robots.constauto.robot import *
-from plotter.plot_configuration import plot_with_matplotlib
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
 from direct.task import Task
@@ -154,7 +152,7 @@ class Simulator3D(ShowBase):
 
         self.interpolation_move = 0
         self.step = 0
-        self.robot = SimpleLogRobot()
+        self.robot = ConstRobot()
 
         # Model complete, store in file
         if globalvars.load_file == "":
@@ -165,9 +163,9 @@ class Simulator3D(ShowBase):
             f.close()
 
 
-        tmp = Dodecahedron(self.robot.x, self.robot.y, self.robot.z)
+        tmp = Dodecahedron(globalvars.global_start_node.x, globalvars.global_start_node.y, globalvars.global_start_node.z)
         globalvars.dodecahedrons.append(tmp)
-        self.robot.grabbed_tile = tmp
+        self.grabbed_tile = tmp
 
         self.x = tmp.x
         self.y = tmp.y
@@ -202,6 +200,125 @@ class Simulator3D(ShowBase):
     def switch_orientation(self):
         globalvars.global_switch = True
 
+
+    def detect_neighbors(self):
+        # search neighbors
+        movable = []
+        for x in globalvars.dodecahedrons:
+            if (x.x, x.y, x.z) == (self.x, self.y, self.z + 1):
+                movable.append('U')
+
+            if (x.x, x.y, x.z) == (self.x, self.y, self.z - 1):
+                movable.append('D')
+
+            if (x.x, x.y, x.z) == (self.x + 1, self.y, self.z):
+                movable.append('F')
+
+            if (x.x, x.y, x.z) == (self.x - 1, self.y, self.z):
+                movable.append('B')
+
+            if (x.x, x.y, x.z) == (self.x-0.5, self.y+0.75, self.z+0.5):
+                movable.append('UBR')
+
+            if (x.x, x.y, x.z) == (self.x-0.5, self.y-0.75, self.z+0.5):
+                movable.append('UBL')
+
+            if (x.x, x.y, x.z) == (self.x+0.5, self.y+0.75, self.z+0.5):
+                movable.append('UFR')
+
+            if (x.x, x.y, x.z) == (self.x+0.5, self.y-0.75, self.z+0.5):
+                movable.append('UFL')
+
+            if (x.x, x.y, x.z) == (self.x-0.5, self.y+0.75, self.z-0.5):
+                movable.append('DBR')
+
+            if (x.x, x.y, x.z) == (self.x-0.5, self.y-0.75, self.z-0.5):
+                movable.append('DBL')
+
+            if (x.x, x.y, x.z) == (self.x+0.5, self.y+0.75, self.z-0.5):
+                movable.append('DFR')
+
+            if (x.x, x.y, x.z) == (self.x+0.5, self.y-0.75, self.z-0.5):
+                movable.append('DFL')
+
+        return movable
+
+    def grab_tile(self):
+        tile = None
+        for i in globalvars.dodecahedrons:
+            if (i.x, i.y, i.z) == (self.x, self.y, self.z):
+                tile = i
+                break
+
+        if tile != None and self.grabbed_tile == None:
+            tile.delete_neighbor_links()
+            self.grabbed_tile = tile
+        else:
+            raise Exception("Error: Could not grab tile.")
+
+    def place_tile(self):
+        count = 0
+        for i in globalvars.dodecahedrons:
+            if (i.x, i.y, i.z) == (self.x, self.y, self.z):
+                count = count + 1
+                break
+        if count > 1:
+            raise Exception("Error: Position is occupied. Tile can not be placed.")
+
+        if self.grabbed_tile == None:
+            raise Exception("Error: Carrying no tile. Tile can not be placed.")
+
+        self.grabbed_tile.find_neighbours(globalvars.dodecahedrons)
+        self.grabbed_tile = None
+
+    def act_move(self, pos):
+        # move robot
+        if pos == 'U':
+            return self.x, self.y, self.z + 1
+
+        if pos == 'D':
+            return self.x, self.y, self.z - 1
+
+        if pos == 'F':
+            return self.x + 1, self.y, self.z
+
+        if pos == 'B':
+            return self.x - 1, self.y, self.z
+
+        if pos == 'UBR':
+            return self.x - 0.5, self.y + 0.75, self.z + 0.5
+
+        if pos == 'UBL':
+            return self.x - 0.5, self.y - 0.75, self.z + 0.5
+
+        if pos == 'UFR':
+            return self.x + 0.5, self.y + 0.75, self.z + 0.5
+
+        if pos == 'UFL':
+            return self.x + 0.5, self.y - 0.75, self.z + 0.5
+
+        if pos == 'DBR':
+            return self.x - 0.5, self.y + 0.75, self.z - 0.5
+
+        if pos == 'DBL':
+            return self.x - 0.5, self.y - 0.75, self.z - 0.5
+
+        if pos == 'DFR':
+            return self.x + 0.5, self.y + 0.75, self.z - 0.5
+
+        if pos == 'DFL':
+            return self.x + 0.5, self.y - 0.75, self.z - 0.5
+
+        if pos == 'grab_tile':
+            self.grab_tile()
+            return self.x, self.y, self.z
+
+        if pos == 'place_tile':
+            self.place_tile()
+            return self.x, self.y, self.z
+
+        return self.x, self.y, self.z
+
     # Define a procedure to move the robot.
     def moveRobot(self, task):
         if not self.running:
@@ -209,10 +326,11 @@ class Simulator3D(ShowBase):
 
         steps = 8 #yyyyyyyyyyyyyyyyyyyyyyyy
         if self.interpolation_move == 0:
-            self.robot.next_move()
-            self.x_next = self.robot.x
-            self.y_next = self.robot.y
-            self.z_next = self.robot.z
+            # Get next move from robot
+            moves = self.detect_neighbors()
+            if moves != []:
+                next_move = self.robot.next_move(moves)
+                self.x_next, self.y_next, self.z_next = self.act_move(next_move)
 
         inter_x = self.x + (self.x_next - self.x) * self.interpolation_move / steps
         inter_y = self.y + (self.y_next - self.y) * self.interpolation_move / steps
@@ -221,20 +339,20 @@ class Simulator3D(ShowBase):
         self.scene.setPos(inter_x, inter_y, inter_z)
         self.interpolation_move += 1
 
-        if self.robot.grabbed_tile != None:
-            self.robot.grabbed_tile.scene.setPos(inter_x, inter_y, inter_z)
+        if self.grabbed_tile != None:
+            self.grabbed_tile.scene.setPos(inter_x, inter_y, inter_z)
 
         if self.interpolation_move == steps+1:
-            self.textObject.setText("Potential: " + str(potential.potential(self.robot.grabbed_tile)))
+            self.textObject.setText("Potential: " + str(potential.potential(self.grabbed_tile)))
             self.interpolation_move = 0
             self.x = self.x_next
             self.y = self.y_next
             self.z = self.z_next
 
-            if self.robot.grabbed_tile != None:
-                self.robot.grabbed_tile.x = self.x
-                self.robot.grabbed_tile.y = self.y
-                self.robot.grabbed_tile.z = self.z
+            if self.grabbed_tile != None:
+                self.grabbed_tile.x = self.x
+                self.grabbed_tile.y = self.y
+                self.grabbed_tile.z = self.z
 
         return Task.cont
 
@@ -351,8 +469,6 @@ def build_new_configuration():
 
 
 build_new_configuration()
-
-#plot_with_matplotlib()
 
 app = Simulator3D()
 
