@@ -2,9 +2,12 @@ from math import pi, sin, cos
 import simplepbr
 import globalvars
 from robots.logauto.robot import *
+from robots.constauto.robot import *
 from plotter.plot_configuration import plot_with_matplotlib
 from direct.showbase.ShowBase import ShowBase
+from direct.gui.OnscreenText import OnscreenText
 from direct.task import Task
+from potential import potential
 import random
 
 
@@ -151,7 +154,7 @@ class Simulator3D(ShowBase):
 
         self.interpolation_move = 0
         self.step = 0
-        self.robot = Robot()
+        self.robot = SimpleLogRobot()
 
         # Model complete, store in file
         if globalvars.load_file == "":
@@ -188,6 +191,9 @@ class Simulator3D(ShowBase):
         # Add the move robot procedure.
         self.taskMgr.add(self.moveRobot, "MoveRobot")
 
+        # Add potential score
+        self.textObject = OnscreenText(text='Potential: 0', pos=(-0.95, 0.9), scale=0.07)
+
 
     def stop(self):
         self.running = not self.running
@@ -219,6 +225,7 @@ class Simulator3D(ShowBase):
             self.robot.grabbed_tile.scene.setPos(inter_x, inter_y, inter_z)
 
         if self.interpolation_move == steps+1:
+            self.textObject.setText("Potential: " + str(potential.potential(self.robot.grabbed_tile)))
             self.interpolation_move = 0
             self.x = self.x_next
             self.y = self.y_next
@@ -230,10 +237,6 @@ class Simulator3D(ShowBase):
                 self.robot.grabbed_tile.z = self.z
 
         return Task.cont
-
-
-
-# Robot Motion --------------------------------------------------------------------------
 
 
 

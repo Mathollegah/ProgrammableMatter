@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import matplotlib
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 import numpy as np
 import globalvars
@@ -43,14 +44,29 @@ def new_dodecahedron(ax, pos, color='cyan'):
     v = np.concatenate((l1, l2, l3, l4, l5))
     ax.scatter3D(v[:, 0], v[:, 1], v[:, 2])
 
+    # l1 0
+    # l2 1-4
+    # l3 5-8
+    # l4 9-12
+    # l5 13
+
     # generate list of sides' polygons of our dodecahedron
     verts = [[l1[0],l2[0],l3[0],l2[1]], [l1[0],l2[1],l3[1],l2[2]], [l1[0],l2[2],l3[2],l2[3]], [l1[0],l2[3],l3[3],l2[0]],
              [l5[0],l4[0],l3[0],l4[1]], [l5[0],l4[1],l3[1],l4[2]], [l5[0],l4[2],l3[2],l4[3]], [l5[0],l4[3],l3[3],l4[0]],
              [l2[1],l3[0],l4[1],l3[1]], [l2[2],l3[1],l4[2],l3[2]], [l2[3],l3[2],l4[3],l3[3]], [l2[0],l3[3],l4[0],l3[0]]]
 
+    #tmp =list(l1)+list(l2)+list(l3)+list(l4)+list(l5)
+    #print(tmp)
+    #for i, val in enumerate(tmp):
+    #    print("\coordinate[] (" + str(i) + ") at ("+str(val[0])+"+#1,-"+str(val[1])+"+#2,"+str(val[2])+")")
+
+    #print(verts)
+
+
+
     # plot sides
     ax.add_collection3d(Poly3DCollection(verts,
-     facecolors=color, linewidths=1, edgecolors='r', alpha=1.0))
+     facecolors=color, linewidths=0.3, edgecolors='black', alpha=0.8))
 
 def plot_with_matplotlib():
     for x in globalvars.dodecahedrons:
@@ -63,6 +79,8 @@ def plot_with_matplotlib():
 
         color = random.choice(['green', 'orange', 'cyan'])
         new_dodecahedron(ax, [x.x, x.y, x.z], color)
+        break
 
     #print(len(dodecahedrons))
+    plt.axis("off")
     plt.show()

@@ -9,20 +9,15 @@ class ShiftOrTake():
         self.removable_tile = None
 
     def move(self, directions, tile):
-        print(self.state)
         #[(0, self.top), (1, self.bottom), (2, self.front), (3, self.back),
         # (4, self.upleft1), (5, self.upleft2), (6, self.upright1), (7, self.upright2),
         # (8, self.downleft1), (9, self.downleft2), (10, self.downright1), (11, self.downright2)]
 
         if self.state == 'set_initial_tile':
-            if directions[1][1] == None and directions[3][1] != None:
+            if directions[1][1] == None:
                 self.state = 'place_tile'
                 self.removable_tile = tile
                 #print(self.removable_tile, self.robot.grabbed_tile)
-                return directions[1][0]
-            elif directions[1][1] == None:
-                self.state = 'place_and_terminate'
-                self.removable_tile = tile
                 return directions[1][0]
             elif directions[3][1] != None:
                 self.state = 'place_tile_next'
@@ -38,10 +33,6 @@ class ShiftOrTake():
         if self.state == 'place_tile_next':
             self.state = 'place_tile'
             return directions[3][0]
-
-        if self.state == 'place_and_terminate':
-            self.state = 'take_next_tile'
-            return 13
 
         if self.state == 'place_tile':
             if tile == None:
