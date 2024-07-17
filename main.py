@@ -154,22 +154,24 @@ class Simulator3D(ShowBase):
         self.step = 0
         self.robot = ConstRobot()
 
-        # Model complete, store in file
-        if globalvars.load_file == "":
-            f = open(globalvars.store_file, "w")
-            f.writelines(str(self.robot.x) + " " +  str(self.robot.y) + " " + str(self.robot.z) + " ")
-            for dodec in globalvars.dodecahedrons:
-                f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
-            f.close()
-
-
-        tmp = Dodecahedron(globalvars.global_start_node.x, globalvars.global_start_node.y, globalvars.global_start_node.z)
+        tmp = Dodecahedron(globalvars.global_start_node.x, globalvars.global_start_node.y,
+                           globalvars.global_start_node.z)
         globalvars.dodecahedrons.append(tmp)
         self.grabbed_tile = tmp
 
         self.x = tmp.x
         self.y = tmp.y
         self.z = tmp.z
+
+        # Model complete, store in file
+        if globalvars.load_file == "":
+            f = open(globalvars.store_file, "w")
+            f.writelines(str(self.x) + " " +  str(self.y) + " " + str(self.z) + " ")
+            for dodec in globalvars.dodecahedrons:
+                f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
+            f.close()
+
+
 
         self.x_next = 0
         self.y_next = 0
@@ -190,7 +192,7 @@ class Simulator3D(ShowBase):
         self.taskMgr.add(self.moveRobot, "MoveRobot")
 
         # Add potential score
-        self.textObject = OnscreenText(text='Potential: 0', pos=(-0.95, 0.9), scale=0.07)
+        self.textObject = OnscreenText(text='Potential: 0', pos=(-0.7, 0.9), scale=0.07)
 
 
     def stop(self):
@@ -200,6 +202,12 @@ class Simulator3D(ShowBase):
     def switch_orientation(self):
         globalvars.global_switch = True
 
+    def detect_occupied(self):
+        for x in globalvars.dodecahedrons:
+            if (x.x, x.y, x.z) == (self.x, self.y, self.z):
+                if x != self.grabbed_tile:
+                    return True
+        return False
 
     def detect_neighbors(self):
         # search neighbors
@@ -254,7 +262,10 @@ class Simulator3D(ShowBase):
             tile.delete_neighbor_links()
             self.grabbed_tile = tile
         else:
-            raise Exception("Error: Could not grab tile.")
+            if tile == None:
+                raise Exception("Error: Could not grab tile. There is no tile.")
+            else:
+                raise Exception("Error: Could not grab tile. Already carrying one.")
 
     def place_tile(self):
         count = 0
@@ -324,12 +335,13 @@ class Simulator3D(ShowBase):
         if not self.running:
             return Task.cont
 
-        steps = 8 #yyyyyyyyyyyyyyyyyyyyyyyy
+        steps = 10 #yyyyyyyyyyyyyyyyyyyyyyyy
         if self.interpolation_move == 0:
             # Get next move from robot
             moves = self.detect_neighbors()
+            occupied = self.detect_occupied()
             if moves != []:
-                next_move = self.robot.next_move(moves)
+                next_move = self.robot.next_move(moves, occupied)
                 self.x_next, self.y_next, self.z_next = self.act_move(next_move)
 
         inter_x = self.x + (self.x_next - self.x) * self.interpolation_move / steps
@@ -343,7 +355,7 @@ class Simulator3D(ShowBase):
             self.grabbed_tile.scene.setPos(inter_x, inter_y, inter_z)
 
         if self.interpolation_move == steps+1:
-            self.textObject.setText("Potential: " + str(potential.potential(self.grabbed_tile)))
+            self.textObject.setText("Potential_X: " + str(potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(self.grabbed_tile)))
             self.interpolation_move = 0
             self.x = self.x_next
             self.y = self.y_next
