@@ -3,21 +3,27 @@ from robots.constauto.states.helper.move_on_surface import *
 class PlaceTile():
     def __init__(self):
         self.state = 'move_on_surface'
-        self.y = 0
+        self.x = 0
         self.move_on_surface = MoveOnSurface()
         self.move_on_bottom = MoveOnSurface()
         self.placed_tile = False
         self.directions = []
         self.last_move = None
+        self.test_pos_last_move = None
+        self.test_pos_state = 'move_front'
+        self.detected_tile_below = False
 
     def reset(self):
         self.state = 'move_on_surface'
-        self.y = 0
+        self.x = 0
         self.move_on_surface.reset()
         self.move_on_bottom.reset()
         self.placed_tile = False
         self.directions = []
         self.last_move = None
+        self.test_pos_last_move = None
+        self.test_pos_state = 'move_front'
+        self.detected_tile_below = False
 
     def invert_moves(self, moves):
         tmp = []
@@ -35,16 +41,6 @@ class PlaceTile():
                 else:
                     tmp.append('U' + i[1:])
         return tmp
-
-    def update_height(self, move):
-        if move == 'U':
-            self.y += 1
-        elif move == 'D':
-            self.y -= 1
-        elif 'U' in move:
-            self.y += 0.5
-        elif 'D' in move:
-            self.y -= 0.5
 
     def move(self, moves):
         ret = None
@@ -80,8 +76,13 @@ class PlaceTile():
                 if 'D' in moves:
                     ret = 'D'
                 else:
-                    self.y = 0
-                    self.state = 'test_position'
+                    if self.placed_tile:
+                        self.state = 'move_up'
+                    else:
+                        self.x = 0
+                        self.state = 'test_position'
+                        self.test_pos_state = 'move_front'
+                        self.detected_tile_below = False
 
         if self.state == 'place_tile_next' and ret == None:
             ret = 'place_tile'
@@ -109,31 +110,110 @@ class PlaceTile():
 
             self.state = 'move_up'
 
-
         if self.state == 'test_position' and ret == None:
-            new_moves = self.invert_moves(moves)
-            ret = self.move_on_bottom.move(new_moves)
+            run = True
+            while (ret == None) and run:
+                if self.test_pos_state == 'move_front' and (ret == None):
+                    if 'D' in moves:
+                        self.test_pos_state = 'place_before'
+                        ret = 'B'
 
-            if ret != None:
-                ret = self.invert_moves([ret])[0]
-                self.update_height(ret)
+                    if not self.detected_tile_below:
+                        for dir in moves:
+                            if 'D' in dir:
+                                self.detected_tile_below = True
+                                break
 
-            if self.move_on_bottom.state == 'new_position':
-                self.move_on_bottom.continue_moving()
-                if self.y >= 1 and self.move_on_bottom.traverse_surface.state != 'return' and not self.placed_tile:
-                    self.state = 'move_one_down'
-                if self.y <= -1 and self.move_on_bottom.traverse_surface.state != 'return' and not self.placed_tile:
-                    self.y = 0
-                    self.move_on_bottom.traverse_surface.return_to_starting_point()
+                    if self.detected_tile_below and (ret == None):
+                        for dir in moves:
+                            if (dir != 'U') and ('U' in dir) and not ('D'+dir[1:]) in moves:
+                                self.test_pos_last_move = 'D'+dir[1:]
+                                ret = 'D'+dir[1:]
+                                self.test_pos_state = 'place_half_below'
 
-            if self.move_on_bottom.state == 'move_step_back':
-                self.move_on_bottom.continue_moving()
-                if self.y >= 1 and not self.placed_tile:
-                    self.state = 'move_one_down'
+                    if ret == None:
+                        if 'F' in moves:
+                            ret = 'F'
+                        else:
+                            self.test_pos_state = 'move_back'
 
-            if self.move_on_bottom.state == 'terminate':
-                self.move_on_bottom.reset()
-                self.state = 'move_up'
+                if self.test_pos_state == 'move_back' and (ret == None):
+                    if 'D' in moves:
+                        self.test_pos_state = 'place_before'
+                        ret = 'F'
+
+                    if not self.detected_tile_below:
+                        for dir in moves:
+                            if 'D' in dir:
+                                self.detected_tile_below = True
+                                break
+
+                    if self.detected_tile_below and (ret == None):
+                        for dir in moves:
+                            if (dir != 'U') and ('U' in dir) and not ('D' + dir[1:]) in moves:
+                                self.test_pos_last_move = 'D'+dir[1:]
+                                ret = 'D'+dir[1:]
+                                self.test_pos_state = 'place_half_below'
+
+                    if ret == None:
+                        if 'B' in moves:
+                            ret = 'B'
+                        else:
+                            self.test_pos_state = 'move_to_origin'
+
+                if self.test_pos_state == 'place_half_below' and (ret == None):
+                    ret = 'place_tile'
+                    self.placed_tile = True
+                    self.test_pos_state = 'return_to_tower'
+
+                if self.test_pos_state == 'return_to_tower' and (ret == None):
+                    ret = ''
+
+                    if 'U' in self.test_pos_last_move:
+                        ret = ret + 'D'
+                    if 'D' in self.test_pos_last_move:
+                        ret = ret + 'U'
+
+                    if 'F' in self.test_pos_last_move:
+                        ret = ret + 'B'
+                    if 'B' in self.test_pos_last_move:
+                        ret = ret + 'F'
+
+                    if 'R' in self.test_pos_last_move:
+                        ret = ret + 'L'
+                    if 'L' in self.test_pos_last_move:
+                        ret = ret + 'R'
+
+                    self.test_pos_state = 'move_to_origin'
+
+                if self.test_pos_state == 'place_before' and (ret == None):
+                    ret = 'D'
+                    self.test_pos_state = 'place_and_up'
+
+                if self.test_pos_state == 'place_and_up' and (ret == None):
+                    ret = 'place_tile'
+                    self.placed_tile = True
+                    self.test_pos_state = 'move_one_up'
+
+                if self.test_pos_state == 'move_one_up' and (ret == None):
+                    ret = 'U'
+                    self.test_pos_state = 'move_to_origin'
+
+                if self.test_pos_state == 'move_to_origin' and (ret == None):
+                    if self.x > 0:
+                        ret = 'B'
+                    if self.x < 0:
+                        ret = 'F'
+                    if self.x == 0:
+                        self.state = 'move_up'
+                        run = False
+
+                if ret == 'F':
+                    self.x += 1
+                if ret == 'B':
+                    self.x -= 1
+                if ret == 'place_tile':
+                    self.move_on_surface.traverse_surface.return_to_starting_point()
 
         if self.state == 'move_one_down' and ret == None:
             ret = 'D'
@@ -142,7 +222,6 @@ class PlaceTile():
         if self.state == 'place_tile' and ret == None:
             ret = 'place_tile'
             self.placed_tile = True
-            self.move_on_bottom.traverse_surface.return_to_starting_point()
             self.move_on_surface.traverse_surface.return_to_starting_point()
             self.state = 'test_position'
 

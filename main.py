@@ -145,6 +145,7 @@ class Simulator3D(ShowBase):
         self.accept('q', self.switch_orientation)
 
         self.running = True
+        self.count = 0
 
         if globalvars.load_file == "":
             tmp = random.choice(globalvars.dodecahedrons)
@@ -330,12 +331,18 @@ class Simulator3D(ShowBase):
 
         return self.x, self.y, self.z
 
+    def init_visualization(self):
+        for dod in globalvars.dodecahedrons:
+            dod.scene.setPos(dod.x, dod.y, dod.z)
+
     # Define a procedure to move the robot.
     def moveRobot(self, task):
         if not self.running:
             return Task.cont
-
-        steps = 10 #yyyyyyyyyyyyyyyyyyyyyyyy
+        print(self.robot.state)
+        print(self.robot.place_tile.move_on_surface.traverse_surface.state)
+        print(self.robot.place_tile.move_on_surface.traverse_surface.path)
+        steps = 1 #yyyyyyyyyyyyyyyyyyyyyyyy
         if self.interpolation_move == 0:
             # Get next move from robot
             moves = self.detect_neighbors()
@@ -369,6 +376,30 @@ class Simulator3D(ShowBase):
         return Task.cont
 
 
+    def moveRobotNoAnimation(self):
+        if not self.running:
+            return
+
+        self.count += 1
+
+        # Get next move from robot
+        moves = self.detect_neighbors()
+        occupied = self.detect_occupied()
+        if moves != []:
+            next_move = self.robot.next_move(moves, occupied)
+            self.x_next, self.y_next, self.z_next = self.act_move(next_move)
+
+        if self.count%1000 == 0:
+            print("Count: " + str(self.count) + ", Potential_X: " + str(potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(self.grabbed_tile)) + " " + self.robot.state)
+
+        self.x = self.x_next
+        self.y = self.y_next
+        self.z = self.z_next
+
+        if self.grabbed_tile != None:
+            self.grabbed_tile.x = self.x
+            self.grabbed_tile.y = self.y
+            self.grabbed_tile.z = self.z
 
 # Build configuration
 def build_new_configuration():
@@ -484,4 +515,15 @@ build_new_configuration()
 
 app = Simulator3D()
 
+#app.run()
+while True:
+    app.moveRobotNoAnimation()
+
+    #if app.count == 133000:
+    #    break
+
+    if app.robot.state == 'terminate':
+        break
+
+app.init_visualization()
 app.run()

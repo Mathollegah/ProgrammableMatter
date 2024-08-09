@@ -107,12 +107,12 @@ class MoveOnSurface():
                 if not self.invert_move(self.last_move_3D) in moves:
                     self.level_change_possible = True
 
-                if (directions_2D[(directions_2D.index(self.last_move)+3) % 6] in tmp) and self.level_change_possible:
-                    self.traverse_surface.return_to_starting_point()
-                    self.last_move = self.traverse_surface.move(self.directions)
-                    self.level_change_possible = False
-                    self.state = 'take_move'
-                    return 'D'
+                #if (directions_2D[(directions_2D.index(self.last_move)+3) % 6] in tmp) and self.level_change_possible:
+                #    self.traverse_surface.return_to_starting_point()
+                #    self.last_move = self.traverse_surface.move(self.directions)
+                #    self.level_change_possible = False
+                #    self.state = 'take_move'
+                #    return 'D'
 
             if 'U' in moves:
                 return 'U'
