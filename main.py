@@ -92,6 +92,7 @@ def add_bounding_box(render, x_max, x_min, y_max, y_min, z_max, z_min):
     cube = render.attachNewNode(snode)
     cube.setTransparency(True)
     cube.setColor(0.1, 0.1, 0.1, 0.7)
+    return cube
 
 
 
@@ -232,8 +233,8 @@ class Simulator3D(ShowBase):
         ShowBase.__init__(self)
         simplepbr.init()
         self.accept('s', self.stop)
-        self.accept('q', self.switch_orientation)
         self.accept('h', self.hide_tile)
+        self.accept('b', self.hide_bounding_box)
 
         self.running = True
         self.count = 0
@@ -276,6 +277,7 @@ class Simulator3D(ShowBase):
         self.scene.reparentTo(self.render)
         self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
         self.scene.setPos(self.x, self.y, self.z)
+        self.bounding_box = None
 
         for x in globalvars.dodecahedrons:
             x.scene = self.loader.loadModel("models/dodeca.glb")
@@ -308,8 +310,10 @@ class Simulator3D(ShowBase):
             if x.z < z_min:
                 z_min = x.z
 
-        if globalvars.global_bound_box:
-            add_bounding_box(self.render, x_max+0.5, x_min-0.5, y_max+0.5, y_min-0.5, z_max+0.5, z_min-0.5)
+        self.bounding_box = add_bounding_box(self.render, x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
+                                             z_max + 0.5, z_min - 0.5)
+        if not globalvars.global_bound_box:
+            self.bounding_box.hide()
 
         # Add the move robot procedure.
         self.taskMgr.add(self.moveRobot, "MoveRobot")
@@ -318,18 +322,23 @@ class Simulator3D(ShowBase):
         self.textObject = OnscreenText(text='Potential: 0', pos=(-0.7, 0.9), scale=0.07)
 
     def hide_tile(self):
-        self.hidden = not self.hidden
-        if self.hidden:
-            self.hidden_tile.scene.show()
+        if self.hidden_tile != None:
+            self.hidden = not self.hidden
+            if not self.hidden:
+                self.hidden_tile.scene.show()
+            else:
+                self.hidden_tile.scene.hide()
+
+    def hide_bounding_box(self):
+        globalvars.global_bound_box = not globalvars.global_bound_box
+        if not globalvars.global_bound_box:
+            self.bounding_box.show()
         else:
-            self.hidden_tile.scene.hide()
+            self.bounding_box.hide()
 
     def stop(self):
         self.running = not self.running
         print("Pause")
-
-    def switch_orientation(self):
-        globalvars.global_switch = True
 
     def detect_occupied(self):
         for x in globalvars.dodecahedrons:
