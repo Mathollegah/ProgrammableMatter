@@ -98,3 +98,338 @@ class TraverseOnSurfaceDFS():
                 self.update_pos(tmp)
             return tmp
         return None
+
+
+####################################################################################################
+# Log Move On Surface                                                                              #
+####################################################################################################
+
+class UniquePoint():
+    def __init__(self):
+        self.state = 'UP'
+        self.up_x = 0
+        self.up_y = 0
+        self.x = 0
+        self.y = 0
+        self.up_start_bound_dir = ''
+        self.terminate = False
+        self.is_up = False
+        self.bound_dir = ''
+        self.force_return = False
+
+    def reset(self):
+        self.state = 'UP'
+        self.up_x = 0
+        self.up_y = 0
+        self.x = 0
+        self.y = 0
+        self.up_start_bound_dir = ''
+        self.terminate = False
+        self.is_up = False
+        self.bound_dir = ''
+        self.force_return = False
+
+    def update_pos(self, ret):
+        if len(ret) == 1:
+            if ret == 'N':
+                self.y += 2
+            else:
+                self.y -= 2
+        else:
+            if 'N' in ret:
+                self.y += 1
+            else:
+                self.y -= 1
+
+            if 'E' in ret:
+                self.x += 1
+            else:
+                self.x -= 1
+
+    def force_return_func(self):
+        self.force_return = True
+
+    def move(self, moves, bound_dir):
+        move = None
+        while (move == None) and (self.state != 'terminate'):
+            if (self.state == 'UP') and (move == None):
+                self.up_x = self.x
+                self.up_y = self.y
+                self.up_start_bound_dir = bound_dir
+                self.bound_dir = bound_dir
+
+                dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+                index = dirs.index(self.bound_dir)
+                for i in range(len(dirs)):
+                    if dirs[(index + i) % len(dirs)] in moves:
+                        if i == 0:
+                            self.bound_dir = dirs[(index + i - 1) % len(dirs)]
+                        else:
+                            self.bound_dir = dirs[(index + i - 2) % len(dirs)]
+                        move = dirs[(index + i) % len(dirs)]
+                        break
+
+                self.state = 'UP2'
+
+            if (self.state == 'UP2') and (move == None):
+                if (self.y < self.up_y) or ((self.y == self.up_y) and (self.x < self.up_x)) or self.force_return:
+                    self.is_up = False
+                    self.state = 'UP_ret'
+
+                    if self.bound_dir in moves and self.force_return:
+                        dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+                        index = dirs.index(self.bound_dir)
+                        self.bound_dir = dirs[(index-1)%6]
+
+                complete_cycle = False
+                dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+                index = dirs.index(self.bound_dir)
+                for i in range(6):
+                    if dirs[(index + i) % 6] == self.up_start_bound_dir:
+                        complete_cycle = True
+                        break
+
+                    if dirs[(index + i) % 6] in moves:
+                        break
+
+                if (self.y == self.up_y) and (self.x == self.up_x) and complete_cycle:
+                    self.terminate = True
+                    self.is_up = True
+                    self.state = 'terminate'
+
+                if self.state == 'UP2':
+                    dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+                    index = dirs.index(self.bound_dir)
+                    for i in range(len(dirs)):
+                        if dirs[(index + i) % len(dirs)] in moves:
+                            if i == 0:
+                                self.bound_dir = dirs[(index + i - 1) % len(dirs)]
+                            else:
+                                self.bound_dir = dirs[(index + i - 2) % len(dirs)]
+                            move = dirs[(index + i) % len(dirs)]
+                            break
+
+            if (self.state == 'UP_ret') and (move == None):
+                self.force_return = False
+                if (self.y == self.up_y) and (self.x == self.up_x):
+                    self.terminate = True
+                    self.is_up = False
+                    self.state = 'terminate'
+
+                if self.state == 'UP_ret':
+                    dirs = ['N', 'NW', 'SW', 'S', 'SE', 'NE']
+                    index = dirs.index(self.bound_dir)
+                    for i in range(len(dirs)):
+                        if dirs[(index + i) % len(dirs)] in moves:
+                            if i == 0:
+                                self.bound_dir = dirs[(index + i - 1) % len(dirs)]
+                            else:
+                                self.bound_dir = dirs[(index + i - 2) % len(dirs)]
+                            move = dirs[(index + i) % len(dirs)]
+                            break
+
+        if move != None:
+            self.update_pos(move)
+        return move, self.terminate, self.is_up
+
+
+class TraverseOnSurfaceLog():
+    def __init__(self):
+        self.up_inst = UniquePoint()
+        self.state = 'TC'
+        self.last_move = ''
+        self.bound_dir = ''
+        self.up_caller = ''
+
+        self.x = 0
+        self.y = 0
+
+        self.x_start = None
+        self.y_start = None
+
+        self.up_x = 0
+        self.up_y = 0
+
+        self.is_up = False
+        self.return_to_start = False
+        self.moved_back = False
+
+        self.moved = False
+        self.special_return_handling = False
+
+    def reset(self):
+        self.state = 'TC'
+        self.last_move = ''
+        self.bound_dir = ''
+        self.up_caller = ''
+
+        self.x = 0
+        self.y = 0
+
+        self.x_start = None
+        self.y_start = None
+
+        self.up_x = 0
+        self.up_y = 0
+
+        self.is_up = False
+        self.return_to_start = False
+        self.moved_back = False
+
+        self.moved = False
+        self.special_return_handling = False
+
+    def update_pos(self, ret):
+        if len(ret) == 1:
+            if ret == 'N':
+                self.y += 2
+            else:
+                self.y -= 2
+        else:
+            if 'N' in ret:
+                self.y += 1
+            else:
+                self.y -= 1
+
+            if 'E' in ret:
+                self.x += 1
+            else:
+                self.x -= 1
+
+    def return_to_starting_point(self):
+        self.return_to_start = True
+        #self.last_move = self.translate_move(self.last_move)
+        #print("Was here", self.bound_dir, self.state, self.up_inst.state, self.up_inst.bound_dir)
+        self.bound_dir = self.translate_move(self.bound_dir)
+        self.up_inst.force_return_func()
+        self.special_return_handling = True
+        #if 'UP' in self.state:
+        #    self.up_inst.state = 'UP_ret'
+
+    def translate_move(self, move):
+        #return move
+        if move == None:########xxxxxxxxxxxxxxxxxxxxxxxx
+            return None
+        tmp = ''
+        for i in move:
+            if i == 'E':
+                tmp = tmp + 'W'
+            elif i == 'W':
+                tmp = tmp + 'E'
+            else:
+                tmp = tmp + i
+        return tmp
+
+
+    def move(self, moves):
+        #print(self.bound_dir)
+        #print(self.state, self.return_to_start)
+        up_moves = [i for i in moves]
+        if self.return_to_start:
+            tmp_moves = [self.translate_move(i) for i in moves]
+            moves = tmp_moves
+            self.last_move = self.translate_move(self.last_move)
+
+            if self.special_return_handling:
+                self.special_return_handling = False
+                if self.bound_dir in moves:
+                    dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+                    index = dirs.index(self.bound_dir)
+                    self.bound_dir = dirs[(index + 1) % 6]
+
+        move = None
+
+        if self.x_start == None:
+            self.x_start = self.x
+            self.y_start = self.y
+
+        if self.x == self.x_start and self.y == self.y_start and self.return_to_start:
+            self.state = 'terminate'
+
+        self.moved_back = True
+
+        if self.bound_dir == 'NE' and not ('SE' in moves):
+            self.bound_dir = 'SE'
+
+        while (move == None) and (self.state != 'terminate'):
+            if (self.state == 'TC') and (move == None):
+                self.moved_back = False
+                if self.x == self.x_start and self.y == self.y_start and self.moved:
+                    self.state = 'terminate'
+
+                if self.state != 'terminate':
+                    if 'N' in moves:
+                        move = 'N'
+                        self.state = 'TC'
+                    else:
+                        self.state = 'UP'
+                        self.bound_dir = 'N'
+                        self.up_caller = 'TC'
+
+            if (self.state == 'RS') and (move == None):
+                if 'S' in moves:
+                    move = 'S'
+                else:
+                    self.bound_dir = 'S'
+                    self.state = 'TB'
+
+            if (self.state == 'TB') and (move == None):
+                self.moved_back = False
+                dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+                index = dirs.index(self.bound_dir)
+                for i in range(6):
+                    if dirs[(index + i) % len(dirs)] in moves:
+                        move = dirs[(index + i) % len(dirs)]
+                        if i == 0:
+                            self.bound_dir = dirs[(index + i - 1) % len(dirs)]
+                        else:
+                            self.bound_dir = dirs[(index + i - 2) % len(dirs)]
+                        self.state = 'TB'
+                        break
+
+                self.state = 'TB2'
+
+            if (self.state == 'TB2') and (move == None):
+                self.state = 'TB'
+                if self.bound_dir == 'N':
+                    self.state = 'UP'
+                    self.up_caller = 'TB'
+                if not ('S' in moves) and ('S' in self.bound_dir):
+                    self.state = 'TC'
+
+            if (self.state == 'UP') and (move == None):
+                if self.return_to_start:
+                    move, terminate, is_up = self.up_inst.move(up_moves,  self.translate_move(self.bound_dir))
+                else:
+                    move, terminate, is_up = self.up_inst.move(up_moves, self.bound_dir)
+
+                if terminate:
+                    self.up_inst.reset()
+                    if is_up:
+                        if self.up_caller == 'TC':
+                            self.state = 'TB'
+
+                        if self.up_caller == 'TB':
+                            self.state = 'RS'
+                    else:
+                        if self.up_caller == 'TC':
+                            self.state = 'RS'
+
+                        if self.up_caller == 'TB':
+                            self.state = 'TB'
+
+                # Directly return to avoid translation of move
+                if move != None:
+                    self.last_move = move
+                    self.update_pos(move)
+                    return move
+
+        if self.return_to_start:
+            move = self.translate_move(move)
+
+        if (self.state != 'UP') and (move != None):
+            self.last_move = move
+            self.update_pos(move)
+
+        self.moved = True
+        return move

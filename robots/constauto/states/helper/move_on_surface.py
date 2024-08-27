@@ -4,7 +4,7 @@ from robots.constauto.states.helper.traverse_surface import *
 class MoveOnSurface():
     def __init__(self):
         self.state = 'move_up'
-        self.traverse_surface = TraverseOnSurfaceDFS()
+        self.traverse_surface = TraverseOnSurfaceLog()
         self.last_move = None
         self.directions = []
         self.level_change_possible = False
@@ -12,7 +12,7 @@ class MoveOnSurface():
 
     def reset(self):
         self.state = 'move_up'
-        self.traverse_surface = TraverseOnSurfaceDFS()
+        self.traverse_surface = TraverseOnSurfaceLog()
         self.last_move = None
         self.directions = []
         self.level_change_possible = False
@@ -116,7 +116,7 @@ class MoveOnSurface():
 
             if 'U' in moves:
                 return 'U'
-            if self.traverse_surface.moved_back and self.traverse_surface.state != 'return':
+            if self.traverse_surface.moved_back:# and self.traverse_surface.state != 'return':
                 self.level_change_possible = False
                 self.state = 'move_step_back'
             else:
@@ -145,6 +145,9 @@ class MoveOnSurface():
 
         if self.state == 'take_move':
             tmp = self.translate_directions_to_3D(self.last_move, moves)
+            #print("tmp", tmp)
+            #print(self.traverse_surface.return_to_start)
+            #print(self.last_move)
             if tmp == None:
                 return 'D'
             else:

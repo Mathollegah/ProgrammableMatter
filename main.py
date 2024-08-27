@@ -8,6 +8,94 @@ from direct.task import Task
 from potential import potential
 import random
 
+##############################################################################
+
+from direct.showbase.ShowBase import ShowBase
+from direct.showbase.DirectObject import DirectObject
+from panda3d.core import GeomVertexFormat, GeomVertexData
+from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
+from panda3d.core import Texture, GeomNode
+from panda3d.core import PerspectiveLens
+from panda3d.core import Light, Spotlight
+from panda3d.core import LVector3
+
+
+def add_bounding_box(render, x_max, x_min, y_max, y_min, z_max, z_min):
+    # the bounding box is hardly inspired from https://github.com/panda3d/panda3d/blob/master/samples/procedural-cube/main.py
+    def normalized(*args):
+        myVec = LVector3(*args)
+        myVec.normalize()
+        return myVec
+
+    def makeSquare(x1, y1, z1, x2, y2, z2):
+        format = GeomVertexFormat.getV3n3cpt2()
+        vdata = GeomVertexData('square', format, Geom.UHDynamic)
+
+        vertex = GeomVertexWriter(vdata, 'vertex')
+        normal = GeomVertexWriter(vdata, 'normal')
+        color = GeomVertexWriter(vdata, 'color')
+        texcoord = GeomVertexWriter(vdata, 'texcoord')
+
+        # make sure we draw the sqaure in the right plane
+        if x1 != x2:
+            vertex.addData3(x1, y1, z1)
+            vertex.addData3(x2, y1, z1)
+            vertex.addData3(x2, y2, z2)
+            vertex.addData3(x1, y2, z2)
+
+            normal.addData3(normalized(2 * x1 - 1, 2 * y1 - 1, 2 * z1 - 1))
+            normal.addData3(normalized(2 * x2 - 1, 2 * y1 - 1, 2 * z1 - 1))
+            normal.addData3(normalized(2 * x2 - 1, 2 * y2 - 1, 2 * z2 - 1))
+            normal.addData3(normalized(2 * x1 - 1, 2 * y2 - 1, 2 * z2 - 1))
+
+        else:
+            vertex.addData3(x1, y1, z1)
+            vertex.addData3(x2, y2, z1)
+            vertex.addData3(x2, y2, z2)
+            vertex.addData3(x1, y1, z2)
+
+            normal.addData3(normalized(2 * x1 - 1, 2 * y1 - 1, 2 * z1 - 1))
+            normal.addData3(normalized(2 * x2 - 1, 2 * y2 - 1, 2 * z1 - 1))
+            normal.addData3(normalized(2 * x2 - 1, 2 * y2 - 1, 2 * z2 - 1))
+            normal.addData3(normalized(2 * x1 - 1, 2 * y1 - 1, 2 * z2 - 1))
+
+        texcoord.addData2f(0.0, 1.0)
+        texcoord.addData2f(0.0, 0.0)
+        texcoord.addData2f(1.0, 0.0)
+        texcoord.addData2f(1.0, 1.0)
+
+        # Quads aren't directly supported by the Geom interface
+        # you might be interested in the CardMaker class if you are
+        # interested in rectangle though
+        tris = GeomTriangles(Geom.UHDynamic)
+        tris.addVertices(0, 1, 3)
+        tris.addVertices(1, 2, 3)
+
+        square = Geom(vdata)
+        square.addPrimitive(tris)
+        return square
+
+    square0 = makeSquare(x_min, y_min, z_min, x_max, y_min, z_max)
+    square1 = makeSquare(x_min, y_max, z_min, x_max, y_max, z_max)
+    square2 = makeSquare(x_min, y_max, z_max, x_max, y_min, z_max)
+    square3 = makeSquare(x_min, y_max, z_min, x_max, y_min, z_min)
+    square4 = makeSquare(x_min, y_min, z_min, x_min, y_max, z_max)
+    square5 = makeSquare(x_max, y_min, z_min, x_max, y_max, z_max)
+    snode = GeomNode('square')
+    snode.addGeom(square0)
+    snode.addGeom(square1)
+    snode.addGeom(square2)
+    snode.addGeom(square3)
+    snode.addGeom(square4)
+    snode.addGeom(square5)
+
+    cube = render.attachNewNode(snode)
+    cube.setTransparency(True)
+    cube.setColor(0.1, 0.1, 0.1, 0.7)
+
+
+
+
 
 class Dodecahedron:
     def __init__(self, _x, _y, _z):
@@ -31,6 +119,8 @@ class Dodecahedron:
         self.downleft2 = None
         self.downright1 = None
         self.downright2 = None
+
+        self.hide = False
 
         self.directions = [(0, self.top), (1, self.bottom), (2, self.front), (3, self.back),
                            (4, self.upleft1), (5, self.upleft2), (6, self.upright1), (7, self.upright2),
@@ -143,6 +233,7 @@ class Simulator3D(ShowBase):
         simplepbr.init()
         self.accept('s', self.stop)
         self.accept('q', self.switch_orientation)
+        self.accept('h', self.hide_tile)
 
         self.running = True
         self.count = 0
@@ -178,6 +269,9 @@ class Simulator3D(ShowBase):
         self.y_next = 0
         self.z_next = 0
 
+        self.hidden_tile = None
+        self.hidden = False
+
         self.scene = self.loader.loadModel("models/robot.glb")
         self.scene.reparentTo(self.render)
         self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
@@ -186,8 +280,36 @@ class Simulator3D(ShowBase):
         for x in globalvars.dodecahedrons:
             x.scene = self.loader.loadModel("models/dodeca.glb")
             x.scene.reparentTo(self.render)
+            x.scene.setTransparency(True)
+            x.scene.setColor(1, 1, 1, 1.0)
             x.scene.setScale(1.0/2.75, 1.0/2.75, 1.0/2.75)
             x.scene.setPos(x.x, x.y, x.z)
+
+        # Add bounding box
+        x_max=-100
+        x_min=100
+        y_max = -100
+        y_min = 100
+        z_max = -100
+        z_min = 100
+        for x in globalvars.dodecahedrons:
+            if x.x > x_max:
+                x_max = x.x
+            if x.x < x_min:
+                x_min = x.x
+
+            if x.y > y_max:
+                y_max = x.y
+            if x.y < y_min:
+                y_min = x.y
+
+            if x.z > z_max:
+                z_max = x.z
+            if x.z < z_min:
+                z_min = x.z
+
+        if globalvars.global_bound_box:
+            add_bounding_box(self.render, x_max+0.5, x_min-0.5, y_max+0.5, y_min-0.5, z_max+0.5, z_min-0.5)
 
         # Add the move robot procedure.
         self.taskMgr.add(self.moveRobot, "MoveRobot")
@@ -195,6 +317,12 @@ class Simulator3D(ShowBase):
         # Add potential score
         self.textObject = OnscreenText(text='Potential: 0', pos=(-0.7, 0.9), scale=0.07)
 
+    def hide_tile(self):
+        self.hidden = not self.hidden
+        if self.hidden:
+            self.hidden_tile.scene.show()
+        else:
+            self.hidden_tile.scene.hide()
 
     def stop(self):
         self.running = not self.running
@@ -214,41 +342,51 @@ class Simulator3D(ShowBase):
         # search neighbors
         movable = []
         for x in globalvars.dodecahedrons:
-            if (x.x, x.y, x.z) == (self.x, self.y, self.z + 1):
-                movable.append('U')
+            if not x.hide:
+                if not self.robot.switched_orientation:
+                    if (x.x, x.y, x.z) == (self.x, self.y, self.z + 1):
+                        movable.append('U')
+                else:
+                    if (x.x, x.y, x.z) == (self.x + 1, self.y, self.z):
+                        movable.append('F')
 
-            if (x.x, x.y, x.z) == (self.x, self.y, self.z - 1):
-                movable.append('D')
+                if (self.hidden_tile == None) or (self.x,self.y,self.z) != (self.hidden_tile.x, self.hidden_tile.y, self.hidden_tile.z):
+                    if (x.x, x.y, x.z) == (self.x, self.y, self.z - 1):
+                        movable.append('D')
 
-            if (x.x, x.y, x.z) == (self.x + 1, self.y, self.z):
-                movable.append('F')
+                    if not self.robot.switched_orientation:
+                        if (x.x, x.y, x.z) == (self.x + 1, self.y, self.z):
+                            movable.append('F')
+                    else:
+                        if (x.x, x.y, x.z) == (self.x, self.y, self.z + 1):
+                            movable.append('U')
 
-            if (x.x, x.y, x.z) == (self.x - 1, self.y, self.z):
-                movable.append('B')
+                    if (x.x, x.y, x.z) == (self.x - 1, self.y, self.z):
+                        movable.append('B')
 
-            if (x.x, x.y, x.z) == (self.x-0.5, self.y+0.75, self.z+0.5):
-                movable.append('UBR')
+                    if (x.x, x.y, x.z) == (self.x-0.5, self.y+0.75, self.z+0.5):
+                        movable.append('UBR')
 
-            if (x.x, x.y, x.z) == (self.x-0.5, self.y-0.75, self.z+0.5):
-                movable.append('UBL')
+                    if (x.x, x.y, x.z) == (self.x-0.5, self.y-0.75, self.z+0.5):
+                        movable.append('UBL')
 
-            if (x.x, x.y, x.z) == (self.x+0.5, self.y+0.75, self.z+0.5):
-                movable.append('UFR')
+                    if (x.x, x.y, x.z) == (self.x+0.5, self.y+0.75, self.z+0.5):
+                        movable.append('UFR')
 
-            if (x.x, x.y, x.z) == (self.x+0.5, self.y-0.75, self.z+0.5):
-                movable.append('UFL')
+                    if (x.x, x.y, x.z) == (self.x+0.5, self.y-0.75, self.z+0.5):
+                        movable.append('UFL')
 
-            if (x.x, x.y, x.z) == (self.x-0.5, self.y+0.75, self.z-0.5):
-                movable.append('DBR')
+                    if (x.x, x.y, x.z) == (self.x-0.5, self.y+0.75, self.z-0.5):
+                        movable.append('DBR')
 
-            if (x.x, x.y, x.z) == (self.x-0.5, self.y-0.75, self.z-0.5):
-                movable.append('DBL')
+                    if (x.x, x.y, x.z) == (self.x-0.5, self.y-0.75, self.z-0.5):
+                        movable.append('DBL')
 
-            if (x.x, x.y, x.z) == (self.x+0.5, self.y+0.75, self.z-0.5):
-                movable.append('DFR')
+                    if (x.x, x.y, x.z) == (self.x+0.5, self.y+0.75, self.z-0.5):
+                        movable.append('DFR')
 
-            if (x.x, x.y, x.z) == (self.x+0.5, self.y-0.75, self.z-0.5):
-                movable.append('DFL')
+                    if (x.x, x.y, x.z) == (self.x+0.5, self.y-0.75, self.z-0.5):
+                        movable.append('DFL')
 
         return movable
 
@@ -329,6 +467,20 @@ class Simulator3D(ShowBase):
             self.place_tile()
             return self.x, self.y, self.z
 
+        if pos == 'place_and_hide_tile':
+            #print("Was here")
+            self.grabbed_tile.hide = True
+            self.hidden_tile = self.grabbed_tile
+            self.place_tile()
+            return self.x, self.y, self.z
+
+        if pos == 'grab_tile_and_show_hidden_tile':
+            #print("Was here 2")
+            self.hidden_tile.hide = False
+            self.hidden_tile = None
+            self.grab_tile()
+            return self.x, self.y, self.z
+
         return self.x, self.y, self.z
 
     def init_visualization(self):
@@ -339,10 +491,10 @@ class Simulator3D(ShowBase):
     def moveRobot(self, task):
         if not self.running:
             return Task.cont
-        print(self.robot.state)
-        print(self.robot.place_tile.move_on_surface.traverse_surface.state)
-        print(self.robot.place_tile.move_on_surface.traverse_surface.path)
-        steps = 1 #yyyyyyyyyyyyyyyyyyyyyyyy
+        #print(self.robot.state)
+        #print(self.robot.place_tile.move_on_surface.traverse_surface.state)
+        #print(self.robot.place_tile.move_on_surface.traverse_surface.path)
+        steps = globalvars.interpolation_steps
         if self.interpolation_move == 0:
             # Get next move from robot
             moves = self.detect_neighbors()
@@ -350,6 +502,14 @@ class Simulator3D(ShowBase):
             if moves != []:
                 next_move = self.robot.next_move(moves, occupied)
                 self.x_next, self.y_next, self.z_next = self.act_move(next_move)
+                #print(self.robot.place_tile.state)
+                #print(self.robot.place_tile.move_on_surface.traverse_surface.bound_dir, self.robot.place_tile.move_on_surface.traverse_surface.state, self.robot.place_tile.move_on_surface.traverse_surface.up_inst.bound_dir)
+
+                #if (self.hidden_tile != None) and (self.x_next, self.y_next, self.z_next) == (self.hidden_tile.x, self.hidden_tile.y, self.hidden_tile.z):
+                #    raise "Went over hidden tile! That should not happen!"
+
+                #if (self.hidden_tile != None) and (self.x, self.y, self.z) == (self.hidden_tile.x, self.hidden_tile.y, self.hidden_tile.z) and (next_move != 'U') and (next_move != 'D'):
+                #    raise "Went in not allowed direction!"
 
         inter_x = self.x + (self.x_next - self.x) * self.interpolation_move / steps
         inter_y = self.y + (self.y_next - self.y) * self.interpolation_move / steps
@@ -388,6 +548,16 @@ class Simulator3D(ShowBase):
         if moves != []:
             next_move = self.robot.next_move(moves, occupied)
             self.x_next, self.y_next, self.z_next = self.act_move(next_move)
+            #print(next_move)
+            #if (self.hidden_tile != None) and (self.x_next, self.y_next, self.z_next) == (
+            #self.hidden_tile.x, self.hidden_tile.y, self.hidden_tile.z) and (next_move != 'place_and_hide_tile'):
+            #    raise "Went over hidden tile! That should not happen!"
+
+            #if (self.hidden_tile != None) and (self.x, self.y, self.z) == (
+            #self.hidden_tile.x, self.hidden_tile.y, self.hidden_tile.z) and (next_move != 'U') and (next_move != 'D') and (next_move != 'place_and_hide_tile') and (self.robot.place_tile.test_pos_state == 'move_front'):
+            #    print(self.robot.place_tile.state)
+            #    print(self.robot.place_tile.test_pos_state)
+            #    raise "Went in not allowed direction!"
 
         if self.count%1000 == 0:
             print("Count: " + str(self.count) + ", Potential_X: " + str(potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(self.grabbed_tile)) + " " + self.robot.state)
@@ -519,8 +689,26 @@ app = Simulator3D()
 while True:
     app.moveRobotNoAnimation()
 
-    #if app.count == 133000:
+    #if app.count == 10000:
     #    break
+
+    #if potential.potential_x(app.grabbed_tile) == 116 and app.robot.state == 'place_tile':
+    #    app.stop()
+    #    break
+
+    #if potential.potential_x(app.grabbed_tile) == 43 and app.robot.place_tile.move_on_surface.traverse_surface.return_to_start:
+    #    app.stop()
+    #    break
+
+    #if potential.potential_x(app.grabbed_tile) == 0 and potential.potential_z(app.grabbed_tile) == 88:
+    #    app.stop()
+    #    break
+
+    #if app.robot.switched_orientation:
+        #if app.hidden_tile != None:
+        #    app.hidden_tile.hide = False
+        #    app.hidden_tile = None
+        #break
 
     if app.robot.state == 'terminate':
         break

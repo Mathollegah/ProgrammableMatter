@@ -150,12 +150,16 @@ class ConstRobot():
                     else:
                         self.switched_orientation = True
                         self.state = 'find_shiftable_row'
+
+                if ret == 'place_tile':
+                    ret = 'place_and_hide_tile'
+
                 if self.place_tile.state == 'placed_tile':
                     self.place_tile.reset()
                     self.state = 'take_initial_tile'
 
             if self.state == 'take_initial_tile' and ret == None:
-                ret = 'grab_tile'
+                ret = 'grab_tile_and_show_hidden_tile'
                 self.state = 'move_one_down'
 
             if self.state == 'move_one_down' and ret == None:
