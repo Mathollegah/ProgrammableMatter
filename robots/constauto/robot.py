@@ -123,6 +123,7 @@ class ConstRobot():
                         self.switched_orientation = True
                         force_exit = True
                         self.state = 'find_shiftable_row'
+                        break
 
             if self.state == 'locally_highest_row' and ret == None:
                 ret = self.locally_highest_row.move(neighbors)
@@ -150,6 +151,7 @@ class ConstRobot():
                     else:
                         self.switched_orientation = True
                         self.state = 'find_shiftable_row'
+                        break
 
                 if ret == 'place_tile':
                     ret = 'place_and_hide_tile'

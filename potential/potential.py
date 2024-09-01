@@ -17,14 +17,18 @@ def potential_x(robot_tile):
         if tile.bottom == None and tile != robot_tile:
             if half:
                 if tile.z % 1 == 0:
-                    pot += (tile.z-min_z-0.5)
+                    pot_tmp = (tile.z-min_z-0.5)
                 else:
-                    pot += (tile.z-min_z)
+                    pot_tmp = (tile.z-min_z)
             else:
                 if tile.z % 1 != 0:
-                    pot += (tile.z-min_z-0.5)
+                    pot_tmp = (tile.z-min_z-0.5)
                 else:
-                    pot += (tile.z-min_z)
+                    pot_tmp = (tile.z-min_z)
+            tile.pot_x = pot_tmp
+            pot += pot_tmp
+        else:
+            tile.pot_x = 0
 
     return pot
 
@@ -45,13 +49,16 @@ def potential_z(robot_tile):
         if tile.back == None and tile != robot_tile:
             if half:
                 if tile.x % 1 == 0:
-                    pot += (tile.x-min_x-0.5)
+                    pot_tmp = (tile.x-min_x-0.5)
                 else:
-                    pot += (tile.x-min_x)
+                    pot_tmp = (tile.x-min_x)
             else:
                 if tile.x % 1 != 0:
-                    pot += (tile.x-min_x-0.5)
+                    pot_tmp = (tile.x-min_x-0.5)
                 else:
-                    pot += (tile.x-min_x)
-
+                    pot_tmp = (tile.x-min_x)
+            tile.pot_z = pot_tmp
+            pot += pot_tmp
+        else:
+            tile.pot_z = 0
     return pot

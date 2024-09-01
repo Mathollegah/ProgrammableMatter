@@ -180,34 +180,34 @@ class UniquePoint():
                         dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
                         index = dirs.index(self.bound_dir)
                         self.bound_dir = dirs[(index-1)%6]
-
-                complete_cycle = False
-                dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
-                index = dirs.index(self.bound_dir)
-                for i in range(6):
-                    if dirs[(index + i) % 6] == self.up_start_bound_dir:
-                        complete_cycle = True
-                        break
-
-                    if dirs[(index + i) % 6] in moves:
-                        break
-
-                if (self.y == self.up_y) and (self.x == self.up_x) and complete_cycle:
-                    self.terminate = True
-                    self.is_up = True
-                    self.state = 'terminate'
-
-                if self.state == 'UP2':
+                else:
+                    complete_cycle = False
                     dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
                     index = dirs.index(self.bound_dir)
-                    for i in range(len(dirs)):
-                        if dirs[(index + i) % len(dirs)] in moves:
-                            if i == 0:
-                                self.bound_dir = dirs[(index + i - 1) % len(dirs)]
-                            else:
-                                self.bound_dir = dirs[(index + i - 2) % len(dirs)]
-                            move = dirs[(index + i) % len(dirs)]
+                    for i in range(6):
+                        if dirs[(index + i) % 6] == self.up_start_bound_dir:
+                            complete_cycle = True
                             break
+
+                        if dirs[(index + i) % 6] in moves:
+                            break
+
+                    if (self.y == self.up_y) and (self.x == self.up_x) and complete_cycle:
+                        self.terminate = True
+                        self.is_up = True
+                        self.state = 'terminate'
+
+                    if self.state == 'UP2':
+                        dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+                        index = dirs.index(self.bound_dir)
+                        for i in range(len(dirs)):
+                            if dirs[(index + i) % len(dirs)] in moves:
+                                if i == 0:
+                                    self.bound_dir = dirs[(index + i - 1) % len(dirs)]
+                                else:
+                                    self.bound_dir = dirs[(index + i - 2) % len(dirs)]
+                                move = dirs[(index + i) % len(dirs)]
+                                break
 
             if (self.state == 'UP_ret') and (move == None):
                 self.force_return = False
@@ -300,15 +300,16 @@ class TraverseOnSurfaceLog():
         self.return_to_start = True
         #self.last_move = self.translate_move(self.last_move)
         #print("Was here", self.bound_dir, self.state, self.up_inst.state, self.up_inst.bound_dir)
-        self.bound_dir = self.translate_move(self.bound_dir)
+        #self.bound_dir = self.translate_move(self.bound_dir)
         self.up_inst.force_return_func()
         self.special_return_handling = True
+        if self.state == 'RS':
+            self.state = 'TC'
         #if 'UP' in self.state:
         #    self.up_inst.state = 'UP_ret'
 
     def translate_move(self, move):
-        #return move
-        if move == None:########xxxxxxxxxxxxxxxxxxxxxxxx
+        if move == None:
             return None
         tmp = ''
         for i in move:
@@ -328,11 +329,13 @@ class TraverseOnSurfaceLog():
         if self.return_to_start:
             tmp_moves = [self.translate_move(i) for i in moves]
             moves = tmp_moves
+
             self.last_move = self.translate_move(self.last_move)
+            self.bound_dir = self.translate_move(self.bound_dir)
 
             if self.special_return_handling:
                 self.special_return_handling = False
-                if self.bound_dir in moves:
+                if self.bound_dir in moves and self.state != 'UP':
                     dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
                     index = dirs.index(self.bound_dir)
                     self.bound_dir = dirs[(index + 1) % 6]
@@ -348,10 +351,12 @@ class TraverseOnSurfaceLog():
 
         self.moved_back = True
 
-        if self.bound_dir == 'NE' and not ('SE' in moves):
-            self.bound_dir = 'SE'
+        #if self.bound_dir == 'NE' and not ('SE' in moves):
+        #    print("Was here!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #    self.bound_dir = 'SE'
 
         while (move == None) and (self.state != 'terminate'):
+            #print(self.state, self.bound_dir)
             if (self.state == 'TC') and (move == None):
                 self.moved_back = False
                 if self.x == self.x_start and self.y == self.y_start and self.moved:
@@ -377,16 +382,20 @@ class TraverseOnSurfaceLog():
                 self.moved_back = False
                 dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
                 index = dirs.index(self.bound_dir)
+                #print("State in TB bound dir1:", self.bound_dir)
+                #print(moves, up_moves)
                 for i in range(6):
                     if dirs[(index + i) % len(dirs)] in moves:
                         move = dirs[(index + i) % len(dirs)]
+                        #print("IN TB move:", move, self.bound_dir, i)
                         if i == 0:
+                            #print("Was herreeeee")
                             self.bound_dir = dirs[(index + i - 1) % len(dirs)]
                         else:
                             self.bound_dir = dirs[(index + i - 2) % len(dirs)]
                         self.state = 'TB'
                         break
-
+                #print("State in TB bound dir2:", self.bound_dir)
                 self.state = 'TB2'
 
             if (self.state == 'TB2') and (move == None):
@@ -394,7 +403,7 @@ class TraverseOnSurfaceLog():
                 if self.bound_dir == 'N':
                     self.state = 'UP'
                     self.up_caller = 'TB'
-                if not ('S' in moves) and ('S' in self.bound_dir):
+                if not ('S' in moves) and (('S' in self.bound_dir) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
                     self.state = 'TC'
 
             if (self.state == 'UP') and (move == None):
@@ -420,16 +429,20 @@ class TraverseOnSurfaceLog():
 
                 # Directly return to avoid translation of move
                 if move != None:
-                    self.last_move = move
+                    #self.last_move = move
                     self.update_pos(move)
+                    if self.return_to_start:
+                        self.bound_dir = self.translate_move(self.bound_dir)
                     return move
 
         if self.return_to_start:
             move = self.translate_move(move)
+            self.bound_dir = self.translate_move(self.bound_dir)
 
         if (self.state != 'UP') and (move != None):
             self.last_move = move
             self.update_pos(move)
 
         self.moved = True
+        #print("Move and Bound Dir: ", move, self.bound_dir)
         return move

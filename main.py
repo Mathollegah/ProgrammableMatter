@@ -122,6 +122,8 @@ class Dodecahedron:
         self.downright2 = None
 
         self.hide = False
+        self.pot_x = None
+        self.pot_z = None
 
         self.directions = [(0, self.top), (1, self.bottom), (2, self.front), (3, self.back),
                            (4, self.upleft1), (5, self.upleft2), (6, self.upright1), (7, self.upright2),
@@ -236,6 +238,11 @@ class Simulator3D(ShowBase):
         self.accept('h', self.hide_tile)
         self.accept('b', self.hide_bounding_box)
 
+        self.accept('o', self.faster)
+        self.accept('l', self.slower)
+
+        self.accept('p', self.hide_not_pot_zero)
+
         self.running = True
         self.count = 0
 
@@ -263,8 +270,6 @@ class Simulator3D(ShowBase):
             for dodec in globalvars.dodecahedrons:
                 f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
             f.close()
-
-
 
         self.x_next = 0
         self.y_next = 0
@@ -339,6 +344,26 @@ class Simulator3D(ShowBase):
     def stop(self):
         self.running = not self.running
         print("Pause")
+
+    def slower(self):
+        globalvars.new_interpolation_steps += 3
+
+    def faster(self):
+        if globalvars.new_interpolation_steps > 3:
+            globalvars.new_interpolation_steps -= 3
+
+    def hide_not_pot_zero(self):
+        tower_lst = []
+        for tile in globalvars.dodecahedrons:
+            if (tile.pot_x, tile.pot_z) != (0, 0):
+                tower_lst.append((tile.x, tile.y))
+
+        print(tower_lst)
+        for tile in globalvars.dodecahedrons:
+            if (tile.pot_x, tile.pot_z) == (0, 0) and not (tile.x, tile.y) in tower_lst:
+                #tile.scene.hide()
+                tile.scene.setTransparency(True)
+                tile.scene.setColor(0.1, 0.1, 0.1, 0.3)
 
     def detect_occupied(self):
         for x in globalvars.dodecahedrons:
@@ -513,12 +538,8 @@ class Simulator3D(ShowBase):
                 self.x_next, self.y_next, self.z_next = self.act_move(next_move)
                 #print(self.robot.place_tile.state)
                 #print(self.robot.place_tile.move_on_surface.traverse_surface.bound_dir, self.robot.place_tile.move_on_surface.traverse_surface.state, self.robot.place_tile.move_on_surface.traverse_surface.up_inst.bound_dir)
+                #print(self.robot.place_tile.move_on_surface.traverse_surface.up_inst.state)
 
-                #if (self.hidden_tile != None) and (self.x_next, self.y_next, self.z_next) == (self.hidden_tile.x, self.hidden_tile.y, self.hidden_tile.z):
-                #    raise "Went over hidden tile! That should not happen!"
-
-                #if (self.hidden_tile != None) and (self.x, self.y, self.z) == (self.hidden_tile.x, self.hidden_tile.y, self.hidden_tile.z) and (next_move != 'U') and (next_move != 'D'):
-                #    raise "Went in not allowed direction!"
 
         inter_x = self.x + (self.x_next - self.x) * self.interpolation_move / steps
         inter_y = self.y + (self.y_next - self.y) * self.interpolation_move / steps
@@ -536,6 +557,8 @@ class Simulator3D(ShowBase):
             self.x = self.x_next
             self.y = self.y_next
             self.z = self.z_next
+
+            globalvars.interpolation_steps = globalvars.new_interpolation_steps
 
             if self.grabbed_tile != None:
                 self.grabbed_tile.x = self.x
@@ -698,10 +721,10 @@ app = Simulator3D()
 while True:
     app.moveRobotNoAnimation()
 
-    #if app.count == 10000:
+    #if app.count == 23000:
     #    break
 
-    #if potential.potential_x(app.grabbed_tile) == 116 and app.robot.state == 'place_tile':
+    #if potential.potential_x(app.grabbed_tile) == 6 and app.robot.state == 'place_tile':
     #    app.stop()
     #    break
 
@@ -709,8 +732,14 @@ while True:
     #    app.stop()
     #    break
 
-    #if potential.potential_x(app.grabbed_tile) == 0 and potential.potential_z(app.grabbed_tile) == 88:
+    #if potential.potential_x(app.grabbed_tile) == 0 and potential.potential_z(app.grabbed_tile) == 44:
     #    app.stop()
+    #    break
+
+    #if app.robot.switched_orientation and potential.potential_z(app.grabbed_tile) == 22:
+    #    app.stop()
+    #    print(app.robot.state)
+    #    print(app.robot.place_tile.state)
     #    break
 
     #if app.robot.switched_orientation:

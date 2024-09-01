@@ -107,7 +107,6 @@ class PlaceTile():
                 ret = ret + 'L'
             if 'L' in self.last_move:
                 ret = ret + 'R'
-
             self.state = 'move_up'
 
         if self.state == 'test_position' and ret == None:
