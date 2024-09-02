@@ -233,9 +233,174 @@ class UniquePoint():
         return move, self.terminate, self.is_up
 
 
+
+class UniquePointOrg():
+    def __init__(self):
+        self.state = 'Init'
+        self.up_x = 0
+        self.up_y = 0
+        self.x = 0
+        self.y = 0
+        self.up_start_bound_dir = ''
+        self.terminate = False
+        self.is_up = False
+        self.bound_dir = ''
+        self.force_return = False
+        self.last_move = ''
+        self.delta = 0
+
+    def reset(self):
+        self.state = 'Init'
+        self.up_x = 0
+        self.up_y = 0
+        self.x = 0
+        self.y = 0
+        self.up_start_bound_dir = ''
+        self.terminate = False
+        self.is_up = False
+        self.bound_dir = ''
+        self.force_return = False
+        self.last_move = ''
+        self.delta = 0
+
+    def update_pos(self, ret):
+        if len(ret) == 1:
+            if ret == 'N':
+                self.y += 2
+            else:
+                self.y -= 2
+        else:
+            if 'N' in ret:
+                self.y += 1
+            else:
+                self.y -= 1
+
+            if 'E' in ret:
+                self.x += 1
+            else:
+                self.x -= 1
+
+    def force_return_func(self):
+        self.force_return = True
+        self.state = 'UP_ret'
+
+    def move_clockwise(self, moves):
+        dirs = ['N', 'NW', 'SW', 'S', 'SE', 'NE']
+        index = dirs.index(self.bound_dir)
+        for i in range(len(dirs)):
+            if dirs[(index + i) % len(dirs)] in moves:
+                if i == 0:
+                    self.bound_dir = dirs[(index + i - 1) % len(dirs)]
+                else:
+                    self.bound_dir = dirs[(index + i - 2) % len(dirs)]
+                move = dirs[(index + i) % len(dirs)]
+                return move
+
+    def move_counterclockwise(self, moves):
+        if self.bound_dir in moves and self.force_return:
+            dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+            index = dirs.index(self.bound_dir)
+            self.bound_dir = dirs[(index - 1) % 6]
+
+        dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+        index = dirs.index(self.bound_dir)
+        for i in range(len(dirs)):
+            if dirs[(index + i) % len(dirs)] in moves:
+                if i == 0:
+                    self.bound_dir = dirs[(index + i - 1) % len(dirs)]
+                else:
+                    self.bound_dir = dirs[(index + i - 2) % len(dirs)]
+                move = dirs[(index + i) % len(dirs)]
+                return move
+
+    def update_delta(self, move):
+        dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+        index = dirs.index(self.last_move)
+
+        if dirs[(index+1)%6] == move:
+            self.delta = (self.delta + 1) % 5
+
+        if dirs[(index-1)%6] == move:
+            self.delta = (self.delta - 1) % 5
+
+        if dirs[(index-2)%6] == move:
+            self.delta = (self.delta - 2) % 5
+
+        if dirs[(index-3)%6] == move:
+            self.delta = (self.delta - 3) % 5
+
+
+    def move(self, moves, bound_dir):
+        move = None
+        while (move == None) and (self.state != 'terminate'):
+            if (self.state == 'Init') and (move == None):
+                if (not 'NE' in moves) or (not 'NW' in moves):
+                    self.state = 'terminate'
+                    return None, True, False
+                else:
+                    self.up_x = self.x
+                    self.up_y = self.y
+                    self.up_start_bound_dir = bound_dir
+                    self.bound_dir = bound_dir
+
+                    self.state = 'FFC'
+                    self.delta = 0
+                    self.update_pos('NW')
+                    self.last_move = 'NW'
+                    return 'NW', False, False
+
+            if (self.state == 'FFC') and (move == None):
+                if self.y <= 0:
+                    if self.last_move == 'SW' and self.delta == 0:
+                        self.state = 'FL'
+                    else:
+                        self.state = 'UP_ret'
+                else:
+                    move = self.move_clockwise(moves)
+
+
+            if (self.state == 'FL') and (move == None):
+                if self.y <= 0:
+                    if self.last_move == 'SW':
+                        if self.delta == 0:
+                            self.state = 'FL'
+                            move = self.move_clockwise(moves)
+                        elif self.delta == 1:
+                            self.state = 'RetP'
+                        else:
+                            self.state = 'UP_ret'
+                    else:
+                        self.state = 'UP_ret'
+                else:
+                    move = self.move_clockwise(moves)
+
+
+            if ((self.state == 'UP_ret') or (self.state == 'RetP')) and (move == None):
+                self.force_return = False
+                if (self.y == self.up_y) and (self.x == self.up_x):
+                    self.terminate = True
+                    self.is_up = False
+                    if self.state == 'RetP':
+                        self.is_up = True
+                    self.state = 'terminate'
+
+                if self.state == 'UP_ret' or (self.state == 'RetP'):
+                    move = self.move_counterclockwise(moves)
+
+        if move != None:
+            self.update_pos(move)
+            self.update_delta(move)
+            self.last_move = move
+        return move, self.terminate, self.is_up
+
+
+
+
+
+
 class TraverseOnSurfaceLog():
     def __init__(self):
-        self.up_inst = UniquePoint()
+        self.up_inst = UniquePointOrg()
         self.state = 'TC'
         self.last_move = ''
         self.bound_dir = ''
@@ -305,6 +470,8 @@ class TraverseOnSurfaceLog():
         self.special_return_handling = True
         if self.state == 'RS':
             self.state = 'TC'
+        #elif self.state == 'TC':
+        #    self.state = 'RS'
         #if 'UP' in self.state:
         #    self.up_inst.state = 'UP_ret'
 
@@ -356,7 +523,7 @@ class TraverseOnSurfaceLog():
         #    self.bound_dir = 'SE'
 
         while (move == None) and (self.state != 'terminate'):
-            #print(self.state, self.bound_dir)
+            #print(self.state, self.bound_dir, self.return_to_start)
             if (self.state == 'TC') and (move == None):
                 self.moved_back = False
                 if self.x == self.x_start and self.y == self.y_start and self.moved:
@@ -403,7 +570,7 @@ class TraverseOnSurfaceLog():
                 if self.bound_dir == 'N':
                     self.state = 'UP'
                     self.up_caller = 'TB'
-                if not ('S' in moves) and (('S' in self.bound_dir) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
+                if not ('S' in moves) and (('S' in self.bound_dir and not self.bound_dir in moves) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
                     self.state = 'TC'
 
             if (self.state == 'UP') and (move == None):
@@ -444,5 +611,6 @@ class TraverseOnSurfaceLog():
             self.update_pos(move)
 
         self.moved = True
-        #print("Move and Bound Dir: ", move, self.bound_dir)
+        print("Move and Bound Dir: ", move, self.bound_dir, self.state)
+        print(moves, up_moves)
         return move
