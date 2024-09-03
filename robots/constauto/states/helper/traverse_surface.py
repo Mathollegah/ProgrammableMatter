@@ -298,7 +298,7 @@ class UniquePointOrg():
 
     def move_counterclockwise(self, moves):
         if self.bound_dir in moves and self.force_return:
-            dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
+            dirs = ['N', 'NW', 'SW', 'S', 'SE', 'NE']
             index = dirs.index(self.bound_dir)
             self.bound_dir = dirs[(index - 1) % 6]
 
@@ -341,7 +341,7 @@ class UniquePointOrg():
                     self.up_x = self.x
                     self.up_y = self.y
                     self.up_start_bound_dir = bound_dir
-                    self.bound_dir = bound_dir
+                    self.bound_dir = 'NE'
 
                     self.state = 'FFC'
                     self.delta = 0
@@ -376,7 +376,6 @@ class UniquePointOrg():
 
 
             if ((self.state == 'UP_ret') or (self.state == 'RetP')) and (move == None):
-                self.force_return = False
                 if (self.y == self.up_y) and (self.x == self.up_x):
                     self.terminate = True
                     self.is_up = False
@@ -386,11 +385,13 @@ class UniquePointOrg():
 
                 if self.state == 'UP_ret' or (self.state == 'RetP'):
                     move = self.move_counterclockwise(moves)
+                self.force_return = False
 
         if move != None:
             self.update_pos(move)
             self.update_delta(move)
             self.last_move = move
+        #print("UP output: ", self.state,)
         return move, self.terminate, self.is_up
 
 
@@ -421,6 +422,7 @@ class TraverseOnSurfaceLog():
 
         self.moved = False
         self.special_return_handling = False
+        self.RStoTB = False
 
     def reset(self):
         self.state = 'TC'
@@ -443,6 +445,7 @@ class TraverseOnSurfaceLog():
 
         self.moved = False
         self.special_return_handling = False
+        self.RStoTB = False
 
     def update_pos(self, ret):
         if len(ret) == 1:
@@ -544,6 +547,7 @@ class TraverseOnSurfaceLog():
                 else:
                     self.bound_dir = 'S'
                     self.state = 'TB'
+                    self.RStoTB = True
 
             if (self.state == 'TB') and (move == None):
                 self.moved_back = False
@@ -570,8 +574,12 @@ class TraverseOnSurfaceLog():
                 if self.bound_dir == 'N':
                     self.state = 'UP'
                     self.up_caller = 'TB'
-                if not ('S' in moves) and (('S' in self.bound_dir and not self.bound_dir in moves) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
+                #                                                and not self.bound_dir in moves
+                if not ('S' in moves) and (('S' in self.bound_dir and (not self.bound_dir in moves or not self.RStoTB)) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
                     self.state = 'TC'
+
+                self.RStoTB = False
+
 
             if (self.state == 'UP') and (move == None):
                 if self.return_to_start:
@@ -600,6 +608,8 @@ class TraverseOnSurfaceLog():
                     self.update_pos(move)
                     if self.return_to_start:
                         self.bound_dir = self.translate_move(self.bound_dir)
+                    #print("Move and Bound Dir UP: ", move, self.bound_dir, self.state)
+                    #print(moves, up_moves)
                     return move
 
         if self.return_to_start:
@@ -611,6 +621,6 @@ class TraverseOnSurfaceLog():
             self.update_pos(move)
 
         self.moved = True
-        print("Move and Bound Dir: ", move, self.bound_dir, self.state)
-        print(moves, up_moves)
+        #print("Move and Bound Dir: ", move, self.bound_dir, self.state)
+        #print(moves, up_moves)
         return move

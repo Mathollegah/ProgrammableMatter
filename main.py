@@ -230,7 +230,6 @@ class Dodecahedron:
 
 
 class Simulator3D(ShowBase):
-
     def __init__(self):
         ShowBase.__init__(self)
         simplepbr.init()
@@ -724,7 +723,7 @@ while True:
     #if app.count == 23000:
     #    break
 
-    #if potential.potential_x(app.grabbed_tile) == 6 and app.robot.state == 'place_tile':
+    #if potential.potential_x(app.grabbed_tile) == 0 and app.robot.state == 'place_tile':
     #    app.stop()
     #    break
 
@@ -749,6 +748,8 @@ while True:
         #break
 
     if app.robot.state == 'terminate':
+        print("Count: " + str(app.count) + ", Potential_X: " + str(potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(app.grabbed_tile)) + " " + app.robot.state)
+
         break
 
 app.init_visualization()
