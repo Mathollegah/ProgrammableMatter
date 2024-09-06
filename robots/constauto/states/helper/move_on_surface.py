@@ -9,6 +9,9 @@ class MoveOnSurface():
         self.directions = []
         self.level_change_possible = False
         self.last_move_3D = None
+        self.last_move_reverted = None
+        self.layer_switch_happend = False
+        self.free_spot_direction = None
 
     def reset(self):
         self.state = 'move_up'
@@ -17,6 +20,9 @@ class MoveOnSurface():
         self.directions = []
         self.level_change_possible = False
         self.last_move_3D = None
+        self.last_move_reverted = None
+        self.layer_switch_happend = False
+        self.free_spot_direction = None
 
     def translate_directions_to_2D(self, moves):
         directions = []
@@ -95,6 +101,19 @@ class MoveOnSurface():
             ret = ret + 'R'
         return ret
 
+    def invert_move_2D(self, move):
+        tmp = ''
+        if 'N' in move:
+            tmp = tmp + 'S'
+        if 'S' in move:
+            tmp = tmp + 'N'
+        if 'E' in move:
+            tmp = tmp + 'W'
+        if 'W' in move:
+            tmp = tmp + 'E'
+        return tmp
+
+
     def continue_moving(self):
         self.state = 'move_down'
 
@@ -107,12 +126,18 @@ class MoveOnSurface():
                 if not self.invert_move(self.last_move_3D) in moves:
                     self.level_change_possible = True
 
-                #if (directions_2D[(directions_2D.index(self.last_move)+3) % 6] in tmp) and self.level_change_possible:
-                #    self.traverse_surface.return_to_starting_point()
-                #    self.last_move = self.traverse_surface.move(self.directions)
-                #    self.level_change_possible = False
-                #    self.state = 'take_move'
-                #    return 'D'
+                if (directions_2D[(directions_2D.index(self.last_move)+3) % 6] in tmp) and self.level_change_possible:
+                    print("layer switch happend")
+                    self.layer_switch_happend = True
+                    self.last_move_reverted = self.invert_move_2D(self.last_move)
+                    self.free_spot_direction = self.translate_directions_to_3D(self.last_move_reverted, ['F', 'B', 'DFR', 'DFL', 'DBR', 'DBL'])
+                    print(self.free_spot_direction)
+                    #self.traverse_surface.return_to_starting_point()
+                    self.traverse_surface.no_unique_point()
+                    self.last_move = self.traverse_surface.move([self.last_move_reverted])
+                    self.level_change_possible = False
+                    self.state = 'move_down_and_take_move'
+                    return None
 
             if 'U' in moves:
                 return 'U'
@@ -122,6 +147,10 @@ class MoveOnSurface():
             else:
                 self.level_change_possible = False
                 self.state = 'new_position'
+
+        if self.state == 'move_down_and_take_move':
+            self.state = 'take_move'
+            return 'D'
 
         if self.state == 'move_down':
             if 'D' in moves:
@@ -138,6 +167,7 @@ class MoveOnSurface():
                 return 'U'
 
             self.last_move = self.traverse_surface.move(self.directions)
+
             if self.traverse_surface.state == 'terminate':
                 self.state = 'terminate'
                 return None

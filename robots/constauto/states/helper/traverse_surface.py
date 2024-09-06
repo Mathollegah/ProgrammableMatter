@@ -464,17 +464,24 @@ class TraverseOnSurfaceLog():
             else:
                 self.x -= 1
 
+    def no_unique_point(self):
+        if self.state == 'UP':
+            self.up_inst.force_return_func()
+
     def return_to_starting_point(self):
         self.return_to_start = True
         #self.last_move = self.translate_move(self.last_move)
         #print("Was here", self.bound_dir, self.state, self.up_inst.state, self.up_inst.bound_dir)
         #self.bound_dir = self.translate_move(self.bound_dir)
-        self.up_inst.force_return_func()
+        if self.state == 'UP':
+            self.up_inst.force_return_func()
         self.special_return_handling = True
         if self.state == 'RS':
             self.state = 'TC'
-        #elif self.state == 'TC':
-        #    self.state = 'RS'
+        elif self.state == 'TB2':
+            self.state = 'TB'
+        elif self.state == 'TC':
+            self.state = 'RS'
         #if 'UP' in self.state:
         #    self.up_inst.state = 'UP_ret'
 
@@ -575,7 +582,7 @@ class TraverseOnSurfaceLog():
                     self.state = 'UP'
                     self.up_caller = 'TB'
                 #                                                and not self.bound_dir in moves
-                if not ('S' in moves) and (('S' in self.bound_dir and (not self.bound_dir in moves or not self.RStoTB)) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
+                if not ('S' in moves) and ((('S' in self.bound_dir or len(moves)==1) and (not self.bound_dir in moves or not self.RStoTB)) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
                     self.state = 'TC'
 
                 self.RStoTB = False
@@ -622,5 +629,5 @@ class TraverseOnSurfaceLog():
 
         self.moved = True
         #print("Move and Bound Dir: ", move, self.bound_dir, self.state)
-        #print(moves, up_moves)
+        #print(moves, up_moves, self.return_to_start)
         return move

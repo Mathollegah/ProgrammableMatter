@@ -7,10 +7,12 @@ class LocallyHighestRow():
 
     def move(self, moves):
         if 'U' in moves:
+            self.state = 'run_north'
             return 'U'
 
         for direction in moves:
             if 'U' in direction:
+                self.state = 'run_north'
                 return direction
 
         if self.state == 'run_north':

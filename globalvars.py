@@ -1,13 +1,15 @@
 load_file = "tests/hole.txt"
 store_file = "demofile.txt"
 #load_file = "tests/simpleshift.txt"
-#load_file = "demofile.txt"
-load_file = ""
-load_file = "tests/potnotzero.txt"
+load_file = "demofile.txt"
+#load_file = ""
+#load_file = "tests/potnotzero.txt"
 #load_file = "tests/randomerror.txt"
 #load_file = "tests/randomerror2.txt"
 #load_file = "tests/randomerror3.txt"
-number_of_times = 500
+#load_file = "tests/randomconf1.txt"
+#load_file = "tests/layerswitch2.txt"
+number_of_times = 40
 
 dodecahedrons = []
 
@@ -17,3 +19,7 @@ global_switch = False
 global_bound_box = False
 interpolation_steps = 30
 new_interpolation_steps = interpolation_steps
+random_configuration = True
+boxsize = 30
+
+movecounter = {}

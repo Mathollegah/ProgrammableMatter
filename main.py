@@ -7,6 +7,7 @@ from direct.gui.OnscreenText import OnscreenText
 from direct.task import Task
 from potential import potential
 import random
+import argparse
 
 ##############################################################################
 
@@ -129,55 +130,69 @@ class Dodecahedron:
                            (4, self.upleft1), (5, self.upleft2), (6, self.upright1), (7, self.upright2),
                            (8, self.downleft1), (9,self.downleft2), (10, self.downright1), (11,self.downright2)]
 
+        self.component = []
+
     def find_neighbours(self, lst):
         for x in lst:
             if (x.x, x.y, x.z+1) == (self.x, self.y, self.z):
                 self.bottom = x
                 x.top = self
+                self.component = self.component + x.component
 
             if (x.x, x.y, x.z-1) == (self.x, self.y, self.z):
                 self.top = x
                 x.bottom = self
+                self.component = self.component + x.component
 
             if (x.x+1, x.y, x.z) == (self.x, self.y, self.z):
                 self.back = x
                 x.front = self
+                self.component = self.component + x.component
 
             if (x.x-1, x.y, x.z) == (self.x, self.y, self.z):
                 self.front = x
                 x.back = self
+                self.component = self.component + x.component
 
             if (x.x - 0.5, x.y + 0.75, x.z + 0.5) == (self.x, self.y, self.z):
                 self.downright2 = x
                 x.upleft1 = self
+                self.component = self.component + x.component
 
             if (x.x - 0.5, x.y - 0.75, x.z + 0.5) == (self.x, self.y, self.z):
                 self.downright1 = x
                 x.upleft2 = self
+                self.component = self.component + x.component
 
             if (x.x + 0.5, x.y + 0.75, x.z + 0.5) == (self.x, self.y, self.z):
                 self.downleft2 = x
                 x.upright1 = self
+                self.component = self.component + x.component
 
             if (x.x + 0.5, x.y - 0.75, x.z + 0.5) == (self.x, self.y, self.z):
                 self.downleft1 = x
                 x.upright2 = self
+                self.component = self.component + x.component
 
             if (x.x - 0.5, x.y + 0.75, x.z - 0.5) == (self.x, self.y, self.z):
                 self.upright2 = x
                 x.downleft1 = self
+                self.component = self.component + x.component
 
             if (x.x - 0.5, x.y - 0.75, x.z - 0.5) == (self.x, self.y, self.z):
                 self.upright1 = x
                 x.downleft2 = self
+                self.component = self.component + x.component
 
             if (x.x + 0.5, x.y + 0.75, x.z - 0.5) == (self.x, self.y, self.z):
                 self.upleft2 = x
                 x.downright1 = self
+                self.component = self.component + x.component
 
             if (x.x + 0.5, x.y - 0.75, x.z - 0.5) == (self.x, self.y, self.z):
                 self.upleft1 = x
                 x.downright2 = self
+                self.component = self.component + x.component
 
     def delete_neighbor_links(self):
         if self.top != None:
@@ -247,6 +262,9 @@ class Simulator3D(ShowBase):
 
         if globalvars.load_file == "":
             tmp = random.choice(globalvars.dodecahedrons)
+            #for i in globalvars.dodecahedrons:
+            #    if i.z > tmp.x:
+            #        tmp = i
             globalvars.global_start_node = tmp
 
         self.interpolation_move = 0
@@ -524,7 +542,6 @@ class Simulator3D(ShowBase):
     def moveRobot(self, task):
         if not self.running:
             return Task.cont
-        #print(self.robot.state)
         #print(self.robot.place_tile.move_on_surface.traverse_surface.state)
         #print(self.robot.place_tile.move_on_surface.traverse_surface.path)
         steps = globalvars.interpolation_steps
@@ -534,6 +551,7 @@ class Simulator3D(ShowBase):
             occupied = self.detect_occupied()
             if moves != []:
                 next_move = self.robot.next_move(moves, occupied)
+                #print(self.robot.state, moves)
                 self.x_next, self.y_next, self.z_next = self.act_move(next_move)
                 #print(self.robot.place_tile.state)
                 #print(self.robot.place_tile.move_on_surface.traverse_surface.bound_dir, self.robot.place_tile.move_on_surface.traverse_surface.state, self.robot.place_tile.move_on_surface.traverse_surface.up_inst.bound_dir)
@@ -604,9 +622,10 @@ class Simulator3D(ShowBase):
 
 # Build configuration
 def build_new_configuration():
-    if globalvars.load_file == "":
+    if globalvars.load_file == "" and not globalvars.random_configuration:
         globalvars.dodecahedrons = [Dodecahedron(0,0,0)]
-        for i in range(globalvars.number_of_times):
+        i=0
+        while i < globalvars.number_of_times-1:
             x = random.choice(globalvars.dodecahedrons)
 
             d = random.choice(x.directions)
@@ -617,72 +636,84 @@ def build_new_configuration():
                     globalvars.dodecahedrons.append(tmp)
                     tmp.bottom = x
                     x.top = tmp
+                    i = i+1
 
                 if d[0] == 1:
                     tmp = Dodecahedron(x.x,x.y,x.z-1)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.top = x
                     x.bottom = tmp
+                    i = i + 1
 
                 if d[0] == 2:
                     tmp = Dodecahedron(x.x+1,x.y,x.z)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.back = x
                     x.front = tmp
+                    i = i + 1
 
                 if d[0] == 3:
                     tmp = Dodecahedron(x.x-1,x.y,x.z)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.front = x
                     x.back = tmp
+                    i = i + 1
 
                 if d[0] == 4:
                     tmp = Dodecahedron(x.x-0.5,x.y+0.75,x.z+0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.downright2 = x
                     x.upleft1 = tmp
+                    i = i + 1
 
                 if d[0] == 5:
                     tmp = Dodecahedron(x.x-0.5,x.y-0.75,x.z+0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.downright1 = x
                     x.upleft2 = tmp
+                    i = i + 1
 
                 if d[0] == 6:
                     tmp = Dodecahedron(x.x+0.5,x.y+0.75,x.z+0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.downleft2 = x
                     x.upright1 = tmp
+                    i = i + 1
 
                 if d[0] == 7:
                     tmp = Dodecahedron(x.x+0.5,x.y-0.75,x.z+0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.downleft1 = x
                     x.upright2 = tmp
+                    i = i + 1
 
                 if d[0] == 8:
                     tmp = Dodecahedron(x.x-0.5,x.y+0.75,x.z-0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.upright2 = x
                     x.downleft1 = tmp
+                    i = i + 1
 
                 if d[0] == 9:
                     tmp = Dodecahedron(x.x-0.5,x.y-0.75,x.z-0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.upright1 = x
                     x.downleft2 = tmp
+                    i = i + 1
 
                 if d[0] == 10:
                     tmp = Dodecahedron(x.x+0.5,x.y+0.75,x.z-0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.upleft2 = x
                     x.downright1 = tmp
+                    i = i + 1
 
                 if d[0] == 11:
                     tmp = Dodecahedron(x.x+0.5,x.y-0.75,x.z-0.5)
                     globalvars.dodecahedrons.append(tmp)
                     tmp.upleft1 = x
                     x.downright2 = tmp
+                    i = i + 1
 
                 tmp.find_neighbours(globalvars.dodecahedrons)
 
@@ -690,6 +721,9 @@ def build_new_configuration():
                     x.directions = [(0, x.top), (1, x.bottom), (2, x.front), (3, x.back),
                                        (4, x.upleft1), (5, x.upleft2), (6, x.upright1), (7, x.upright2),
                                        (8, x.downleft1), (9, x.downleft2), (10, x.downright1), (11, x.downright2)]
+
+    elif globalvars.load_file == "" and globalvars.random_configuration:
+        build_random_configuration()
 
     else:
         f = open(globalvars.load_file, "r")
@@ -710,11 +744,101 @@ def build_new_configuration():
                 break
 
 
+def build_random_configuration():
+    def pick_position(boxsize):
+        x = random.choice(list(range(boxsize)))
+        y = random.choice(list(range(boxsize)))
+        z = random.choice(list(range(boxsize)))
+        if y%2 == 1:
+            x = x+0.5
+            z = z+0.5
+        y = y * 0.75
+        return x, y, z
 
+    print("lslalalal")
+    boxsize = globalvars.boxsize
+    components = {}
+    component_counter = 0
+    globalvars.dodecahedrons = []
+
+    max_component = 0
+    comp_name = None
+    while max_component < globalvars.number_of_times:
+        x,y,z = pick_position(boxsize)
+
+        exists = False
+        for tile in globalvars.dodecahedrons:
+            if (tile.x == x) and (tile.y == y) and (tile.z == z):
+                exists = True
+                break
+
+        if not exists:
+            tmp = Dodecahedron(x, y, z)
+            tmp.component = [component_counter]
+            components[component_counter] = 1
+            component_counter += 1
+            globalvars.dodecahedrons.append(tmp)
+            tmp.find_neighbours(globalvars.dodecahedrons)
+
+            tmp.component = list(set(tmp.component))
+            min_comp = min(tmp.component)
+
+            val = 0
+            for i in tmp.component:
+                val += components[i]
+
+            components[min_comp] = val
+
+            for comp in tmp.component:
+                for dod in globalvars.dodecahedrons:
+                    if comp in dod.component:
+                        dod.component = [min_comp]
+
+            max_component = 0
+            for i in components:
+                if components[i] > max_component:
+                    max_component = components[i]
+                    comp_name = i
+
+    new_dodecas = []
+    for i in globalvars.dodecahedrons:
+        if comp_name in i.component:
+            new_dodecas.append(i)
+    globalvars.dodecahedrons = new_dodecas
+
+    dodeca = random.choice(globalvars.dodecahedrons)
+    tmp_x = dodeca.x
+    tmp_y = dodeca.y
+    tmp_z = dodeca.z
+    for i in globalvars.dodecahedrons:
+        i.x -= tmp_x
+        i.y -= tmp_y
+        i.z -= tmp_z
+
+    print("finished")
+    print(len(globalvars.dodecahedrons))
+
+
+
+
+#ap = argparse.ArgumentParser()
+
+
+
+globalvars.movecounter['find_shiftable_row'] = 0
+globalvars.movecounter['locally_highest_row'] = 0
+globalvars.movecounter['shift_or_take'] = 0
+globalvars.movecounter['place_tile'] = 0
+globalvars.movecounter['take_initial_tile'] = 0
 
 build_new_configuration()
 
+
 app = Simulator3D()
+
+print("Count: " + str(app.count) + ", Potential_X: " + str(
+    potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(
+    potential.potential_z(app.grabbed_tile)) + " " + app.robot.state)
 
 #app.run()
 while True:
@@ -723,7 +847,7 @@ while True:
     #if app.count == 23000:
     #    break
 
-    #if potential.potential_x(app.grabbed_tile) == 0 and app.robot.state == 'place_tile':
+    #if potential.potential_x(app.grabbed_tile) <= 3514 and app.robot.state == 'place_tile':
     #    app.stop()
     #    break
 
@@ -749,8 +873,8 @@ while True:
 
     if app.robot.state == 'terminate':
         print("Count: " + str(app.count) + ", Potential_X: " + str(potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(app.grabbed_tile)) + " " + app.robot.state)
-
+        print(globalvars.movecounter)
         break
 
-app.init_visualization()
-app.run()
+#app.init_visualization()
+#app.run()

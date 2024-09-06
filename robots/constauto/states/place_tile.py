@@ -44,9 +44,21 @@ class PlaceTile():
 
     def move(self, moves):
         ret = None
-
+        #print(self.state)
         if self.state == 'move_on_surface' and ret == None:
             ret = self.move_on_surface.move(moves)
+            if self.move_on_surface.layer_switch_happend and not self.placed_tile:
+                self.last_move = self.move_on_surface.free_spot_direction
+
+                if self.last_move == 'F' or self.last_move == 'B':
+                    self.state = 'one_intermediate_down'
+                    return 'D'
+                else:
+                    self.state = 'place_tile_next'
+                    return self.move_on_surface.free_spot_direction
+            #elif self.move_on_surface.layer_switch_happend:
+            #    ret = self.move_on_surface.move(moves)
+
             if self.move_on_surface.state == 'new_position' or self.move_on_surface.state == 'move_step_back':
                 self.state = 'move_down'
                 self.directions = []
@@ -58,6 +70,10 @@ class PlaceTile():
                     self.state = 'terminate'
                 else:
                     self.state = 'placed_tile'
+
+        if self.state == 'one_intermediate_down' and ret == None:
+            self.state = 'place_tile_next'
+            return self.move_on_surface.free_spot_direction
 
         if self.state == 'move_down' and ret == None:
             self.directions = self.directions + moves
@@ -107,7 +123,12 @@ class PlaceTile():
                 ret = ret + 'L'
             if 'L' in self.last_move:
                 ret = ret + 'R'
-            self.state = 'move_up'
+
+            if self.move_on_surface.layer_switch_happend:
+                self.state = 'move_on_surface'
+                self.move_on_surface.layer_switch_happend = False
+            else:
+                self.state = 'move_up'
 
         if self.state == 'test_position' and ret == None:
             run = True

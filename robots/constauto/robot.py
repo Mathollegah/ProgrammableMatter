@@ -5,6 +5,8 @@ from robots.constauto.states.shift_or_take import *
 
 from robots.constauto.states.place_tile import *
 
+import globalvars
+
 class ConstRobot():
     def __init__(self):
         self.state = 'find_shiftable_row'
@@ -111,6 +113,8 @@ class ConstRobot():
         neighbors = self.switch_orientation(neighbors, self.switched_orientation)
         while ret == None and self.state != 'terminate' and not force_exit:
             if self.state == 'find_shiftable_row' and ret == None:
+                globalvars.movecounter['find_shiftable_row'] += 1
+
                 ret = self.find_shiftable_row.move(neighbors)
                 if self.find_shiftable_row.state == 'terminate':
                     self.find_shiftable_row.reset()
@@ -126,12 +130,15 @@ class ConstRobot():
                         break
 
             if self.state == 'locally_highest_row' and ret == None:
+                globalvars.movecounter['locally_highest_row'] += 1
                 ret = self.locally_highest_row.move(neighbors)
                 if self.locally_highest_row.state == 'terminate':
                     self.locally_highest_row.reset()
                     self.state = 'shift_or_take'
 
             if self.state == 'shift_or_take' and ret == None:
+                globalvars.movecounter['shift_or_take'] += 1
+
                 ret = self.shift_or_take.move(neighbors, occupied, self.carrying_tile)
                 if self.shift_or_take.state == 'terminate_place':
                     self.shift_or_take.reset()
@@ -142,6 +149,11 @@ class ConstRobot():
                     self.state = 'move_one_down'
 
             if self.state == 'place_tile' and ret == None:
+                if not self.place_tile.placed_tile:
+                    globalvars.movecounter['place_tile'] += 1
+                else:
+                    globalvars.movecounter['take_initial_tile'] += 1
+
                 ret = self.place_tile.move(neighbors)
                 if self.place_tile.state == 'terminate':
                     self.place_tile.reset()
