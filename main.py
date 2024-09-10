@@ -19,7 +19,26 @@ from panda3d.core import Texture, GeomNode
 from panda3d.core import PerspectiveLens
 from panda3d.core import Light, Spotlight
 from panda3d.core import LVector3
+from direct.directtools.DirectGeometry import LineNodePath
+from panda3d.core import Vec4
 
+from panda3d.core import (
+    Geom,
+    GeomNode,
+    GeomTriangles,
+    GeomVertexData,
+    GeomVertexFormat,
+    GeomVertexWriter,
+)
+
+def add_axis(render, x_max, x_min, y_max, y_min, z_max, z_min):
+    vertical = LineNodePath(render, colorVec=Vec4(0, 0, 0, 1))
+    vertical.setThickness(12)
+    vertical.drawLines([((x_min, y_min, z_min), (x_max, y_min, z_min))])
+    vertical.drawLines([((x_min, y_min, z_min), (x_min, y_max, z_min))])
+    vertical.drawLines([((x_min, y_min, z_min), (x_min, y_min, z_max))])
+    vertical.create()
+    vertical.reparentTo(render)
 
 def add_bounding_box(render, x_max, x_min, y_max, y_min, z_max, z_min):
     # the bounding box is hardly inspired from https://github.com/panda3d/panda3d/blob/master/samples/procedural-cube/main.py
@@ -246,8 +265,9 @@ class Dodecahedron:
 
 class Simulator3D(ShowBase):
     def __init__(self):
-        ShowBase.__init__(self)
-        simplepbr.init()
+        if not globalvars.onlygenerate:
+            ShowBase.__init__(self)
+            simplepbr.init()
         self.accept('s', self.stop)
         self.accept('h', self.hide_tile)
         self.accept('b', self.hide_bounding_box)
@@ -280,6 +300,8 @@ class Simulator3D(ShowBase):
         self.y = tmp.y
         self.z = tmp.z
 
+        globalvars.robot_coordinates = (self.x, self.y, self.z)
+
         # Model complete, store in file
         if globalvars.load_file == "":
             f = open(globalvars.store_file, "w")
@@ -294,20 +316,20 @@ class Simulator3D(ShowBase):
 
         self.hidden_tile = None
         self.hidden = False
+        if not globalvars.onlygenerate:
+            self.scene = self.loader.loadModel("models/robot.glb")
+            self.scene.reparentTo(self.render)
+            self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
+            self.scene.setPos(self.x, self.y, self.z)
+            self.bounding_box = None
 
-        self.scene = self.loader.loadModel("models/robot.glb")
-        self.scene.reparentTo(self.render)
-        self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
-        self.scene.setPos(self.x, self.y, self.z)
-        self.bounding_box = None
-
-        for x in globalvars.dodecahedrons:
-            x.scene = self.loader.loadModel("models/dodeca.glb")
-            x.scene.reparentTo(self.render)
-            x.scene.setTransparency(True)
-            x.scene.setColor(1, 1, 1, 1.0)
-            x.scene.setScale(1.0/2.75, 1.0/2.75, 1.0/2.75)
-            x.scene.setPos(x.x, x.y, x.z)
+            for x in globalvars.dodecahedrons:
+                x.scene = self.loader.loadModel("models/dodeca.glb")
+                x.scene.reparentTo(self.render)
+                x.scene.setTransparency(True)
+                x.scene.setColor(1, 1, 1, 1.0)
+                x.scene.setScale(1.0/2.75, 1.0/2.75, 1.0/2.75)
+                x.scene.setPos(x.x, x.y, x.z)
 
         # Add bounding box
         x_max=-100
@@ -332,16 +354,22 @@ class Simulator3D(ShowBase):
             if x.z < z_min:
                 z_min = x.z
 
-        self.bounding_box = add_bounding_box(self.render, x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
+        add_axis(self.render, x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
                                              z_max + 0.5, z_min - 0.5)
-        if not globalvars.global_bound_box:
+
+        if not globalvars.onlygenerate:
+            self.bounding_box = add_bounding_box(self.render, x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
+                                             z_max + 0.5, z_min - 0.5)
+        if not globalvars.global_bound_box and not globalvars.onlygenerate:
             self.bounding_box.hide()
 
         # Add the move robot procedure.
-        self.taskMgr.add(self.moveRobot, "MoveRobot")
+        if not globalvars.onlygenerate:
+            self.taskMgr.add(self.moveRobot, "MoveRobot")
 
         # Add potential score
-        self.textObject = OnscreenText(text='Potential: 0', pos=(-0.7, 0.9), scale=0.07)
+        if not globalvars.onlygenerate:
+            self.textObject = OnscreenText(text='Potential: 0', pos=(-0.7, 0.9), scale=0.07)
 
     def hide_tile(self):
         if self.hidden_tile != None:
@@ -575,6 +603,7 @@ class Simulator3D(ShowBase):
             self.y = self.y_next
             self.z = self.z_next
 
+            globalvars.robot_coordinates = (self.x, self.y, self.z)
             globalvars.interpolation_steps = globalvars.new_interpolation_steps
 
             if self.grabbed_tile != None:
@@ -589,6 +618,7 @@ class Simulator3D(ShowBase):
         if not self.running:
             return
 
+        globalvars.global_move_count += 1
         self.count += 1
 
         # Get next move from robot
@@ -608,12 +638,27 @@ class Simulator3D(ShowBase):
             #    print(self.robot.place_tile.test_pos_state)
             #    raise "Went in not allowed direction!"
 
-        if self.count%1000 == 0:
-            print("Count: " + str(self.count) + ", Potential_X: " + str(potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(self.grabbed_tile)) + " " + self.robot.state)
+        if self.count%globalvars.printsteps == 0:
+            pot_x = potential.potential_x(self.grabbed_tile)
+            pot_z = potential.potential_z(self.grabbed_tile)
+            print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(pot_x) + ", " + "Potential_Z: " + str(pot_z))
+
+            if (pot_x, pot_z) == globalvars.pot:
+                globalvars.pot_equal_count += 1
+                if globalvars.pot_equal_count > 120*1000/globalvars.printsteps:
+                    self.robot.state = 'terminate'
+                    print("ERROR")
+                    return
+            else:
+                globalvars.pot = (pot_x, pot_z)
+                globalvars.pot_equal_count = 0
+
 
         self.x = self.x_next
         self.y = self.y_next
         self.z = self.z_next
+
+        globalvars.robot_coordinates = (self.x, self.y, self.z)
 
         if self.grabbed_tile != None:
             self.grabbed_tile.x = self.x
@@ -625,7 +670,7 @@ def build_new_configuration():
     if globalvars.load_file == "" and not globalvars.random_configuration:
         globalvars.dodecahedrons = [Dodecahedron(0,0,0)]
         i=0
-        while i < globalvars.number_of_times-1:
+        while i < globalvars.number_of_tiles-1:
             x = random.choice(globalvars.dodecahedrons)
 
             d = random.choice(x.directions)
@@ -755,7 +800,7 @@ def build_random_configuration():
         y = y * 0.75
         return x, y, z
 
-    print("lslalalal")
+    print("Generate configuration")
     boxsize = globalvars.boxsize
     components = {}
     component_counter = 0
@@ -763,7 +808,7 @@ def build_random_configuration():
 
     max_component = 0
     comp_name = None
-    while max_component < globalvars.number_of_times:
+    while max_component < globalvars.number_of_tiles:
         x,y,z = pick_position(boxsize)
 
         exists = False
@@ -821,60 +866,87 @@ def build_random_configuration():
 
 
 
-#ap = argparse.ArgumentParser()
+ap = argparse.ArgumentParser()
 
+ap.add_argument("--visualize", default=True, help="Whether to render the configuration or run the algorithm in the background.")
+ap.add_argument("--tiles", default=100, help="Minimal number of tiles in random configuration.")
+ap.add_argument("--infile", default="C:\\Users\\bergm\\PycharmProjects\\SimulatorAnalysis\\configurations\\tiles180\\config015.txt", help="Configuration to load.")
+ap.add_argument("--outfile", default="demofile.txt", help="Configuration to load.")
+ap.add_argument("--random", default=True, help="Whether a random configuration should be created.")
+ap.add_argument("--boxsize", default=25, help="Size of box in which the random configuration is created..")
+ap.add_argument("--printsteps", default=1000, help="Minimal number of tiles in random configuration.")
+ap.add_argument("--onlygenerate", default=False, help="Minimal number of tiles in random configuration.")
+ap.add_argument("--logarithmic", default=False, help="Whether to use logarithmic or constant memory.")
+ap.add_argument("--runsilent", default=False, help="Whether to use logarithmic or constant memory.")
 
+args = vars(ap.parse_args())
+globalvars.visualize = args["visualize"]
+globalvars.number_of_tiles = int(args["tiles"])
+globalvars.load_file = args["infile"]
+globalvars.store_file = args["outfile"]
+globalvars.random_configuration = args["random"]
+globalvars.boxsize = int(args["boxsize"])
+globalvars.printsteps = int(args["printsteps"])
+globalvars.onlygenerate = bool(args["onlygenerate"])
+globalvars.logarithmic_memory = bool(args["logarithmic"])
+globalvars.run_silent = bool(args["runsilent"])
 
 globalvars.movecounter['find_shiftable_row'] = 0
 globalvars.movecounter['locally_highest_row'] = 0
 globalvars.movecounter['shift_or_take'] = 0
 globalvars.movecounter['place_tile'] = 0
 globalvars.movecounter['take_initial_tile'] = 0
+globalvars.movecounter['move_pebble'] = 0
 
 build_new_configuration()
 
 
 app = Simulator3D()
 
-print("Count: " + str(app.count) + ", Potential_X: " + str(
-    potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(
-    potential.potential_z(app.grabbed_tile)) + " " + app.robot.state)
+if not globalvars.onlygenerate or globalvars.run_silent:
+    print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(
+        potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(
+        potential.potential_z(app.grabbed_tile)))
 
-#app.run()
-while True:
-    app.moveRobotNoAnimation()
+    #app.run()
+    while not globalvars.visualize:
+        app.moveRobotNoAnimation()
 
-    #if app.count == 23000:
-    #    break
+        #if app.count == 23000:
+        #    break
 
-    #if potential.potential_x(app.grabbed_tile) <= 3514 and app.robot.state == 'place_tile':
-    #    app.stop()
-    #    break
+        #if potential.potential_x(app.grabbed_tile) <= 3514 and app.robot.state == 'place_tile':
+        #    app.stop()
+        #    break
 
-    #if potential.potential_x(app.grabbed_tile) == 43 and app.robot.place_tile.move_on_surface.traverse_surface.return_to_start:
-    #    app.stop()
-    #    break
+        #if potential.potential_x(app.grabbed_tile) == 43 and app.robot.place_tile.move_on_surface.traverse_surface.return_to_start:
+        #    app.stop()
+        #    break
 
-    #if potential.potential_x(app.grabbed_tile) == 0 and potential.potential_z(app.grabbed_tile) == 44:
-    #    app.stop()
-    #    break
+        #if potential.potential_x(app.grabbed_tile) == 0 and potential.potential_z(app.grabbed_tile) == 44:
+        #    app.stop()
+        #    break
 
-    #if app.robot.switched_orientation and potential.potential_z(app.grabbed_tile) == 22:
-    #    app.stop()
-    #    print(app.robot.state)
-    #    print(app.robot.place_tile.state)
-    #    break
+        #if app.robot.switched_orientation and potential.potential_z(app.grabbed_tile) == 22:
+        #    app.stop()
+        #    print(app.robot.state)
+        #    print(app.robot.place_tile.state)
+        #    break
 
-    #if app.robot.switched_orientation:
-        #if app.hidden_tile != None:
-        #    app.hidden_tile.hide = False
-        #    app.hidden_tile = None
-        #break
+        #if app.robot.switched_orientation:
+            #if app.hidden_tile != None:
+            #    app.hidden_tile.hide = False
+            #    app.hidden_tile = None
+            #break
 
-    if app.robot.state == 'terminate':
-        print("Count: " + str(app.count) + ", Potential_X: " + str(potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(app.grabbed_tile)) + " " + app.robot.state)
-        print(globalvars.movecounter)
-        break
+        if app.robot.state == 'terminate':
+            print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(app.grabbed_tile)))
+            print(globalvars.movecounter)
+            break
 
-#app.init_visualization()
-#app.run()
+
+    if globalvars.visualize:
+        app.init_visualization()
+        app.run()
+
+    print("Number of Dodecahedrons: ", len(globalvars.dodecahedrons))

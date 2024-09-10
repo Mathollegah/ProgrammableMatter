@@ -1,3 +1,4 @@
+import globalvars
 from robots.constauto.states.helper.move_on_surface import *
 
 class PlaceTile():
@@ -130,7 +131,7 @@ class PlaceTile():
             else:
                 self.state = 'move_up'
 
-        if self.state == 'test_position' and ret == None:
+        if self.state == 'test_position' and ret == None and not globalvars.logarithmic_memory:
             run = True
             while (ret == None) and run:
                 if self.test_pos_state == 'move_front' and (ret == None):
@@ -235,6 +236,25 @@ class PlaceTile():
                 if ret == 'place_tile':
                     self.move_on_surface.traverse_surface.return_to_starting_point()
 
+        if self.state == 'test_position' and ret == None and globalvars.logarithmic_memory:
+            if self.test_pos_state == 'move_front' and (ret == None):
+                if globalvars.robot_z_coord - 1 >= globalvars.min_z_coord:
+                    ret = 'D'
+                    self.test_pos_state = 'place_and_up'
+                else:
+                    self.state = 'move_up'
+
+            if self.test_pos_state == 'place_and_up' and (ret == None):
+                ret = 'place_tile'
+                self.placed_tile = True
+                self.test_pos_state = 'move_one_up'
+                self.move_on_surface.traverse_surface.return_to_starting_point()
+
+            if self.test_pos_state == 'move_one_up' and (ret == None):
+                ret = 'U'
+                self.state = 'move_up'
+                self.test_pos_state = 'move_front'
+
         if self.state == 'move_one_down' and ret == None:
             ret = 'D'
             self.state = 'place_tile'
@@ -246,11 +266,16 @@ class PlaceTile():
             self.state = 'test_position'
 
         if self.state == 'move_up' and ret == None:
-            if 'U' in moves:
-                ret = 'U'
-            else:
-                self.state = 'move_on_surface'
-                self.move_on_surface.continue_moving()
+            #if 'U' in moves:
+            #    ret = 'U'
+            #else:
+            self.state = 'move_on_surface'
+            self.move_on_surface.continue_moving()
+
+        if not globalvars.logarithmic_memory and ret == 'place_tile':
+            # Approximation of extra steps to move pebbles when collecting pebble from starting point
+            globalvars.movecounter['move_pebble'] += self.move_on_surface.traverse_surface.pebble_move_count
+            globalvars.global_move_count += self.move_on_surface.traverse_surface.pebble_move_count
 
         return ret
 

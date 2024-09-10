@@ -9,7 +9,8 @@ load_file = "demofile.txt"
 #load_file = "tests/randomerror3.txt"
 #load_file = "tests/randomconf1.txt"
 #load_file = "tests/layerswitch2.txt"
-number_of_times = 40
+number_of_tiles = 40
+printsteps = 1000
 
 dodecahedrons = []
 
@@ -23,3 +24,19 @@ random_configuration = True
 boxsize = 30
 
 movecounter = {}
+
+visualize = False
+onlygenerate = False
+
+logarithmic_memory = False
+
+robot_coordinates = (0, 0, 0)
+robot_z_coord = 0
+min_z_coord = 10000000
+
+global_move_count = 0
+
+pot = (100000, 00000)
+pot_equal_count = 0
+
+run_silent = True

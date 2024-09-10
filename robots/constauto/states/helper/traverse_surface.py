@@ -1,3 +1,6 @@
+import globalvars
+
+
 class TraverseOnSurfaceDFS():
     def __init__(self):
         self.x = 0
@@ -9,6 +12,7 @@ class TraverseOnSurfaceDFS():
         self.next_dir = 'N'
         self.moved_back = False
         self.state = 'run'
+
 
     def reset(self):
         self.x = 0
@@ -249,6 +253,8 @@ class UniquePointOrg():
         self.last_move = ''
         self.delta = 0
 
+        self.dist_to_start = 0
+
     def reset(self):
         self.state = 'Init'
         self.up_x = 0
@@ -262,6 +268,7 @@ class UniquePointOrg():
         self.force_return = False
         self.last_move = ''
         self.delta = 0
+        self.dist_to_start = 0
 
     def update_pos(self, ret):
         if len(ret) == 1:
@@ -285,6 +292,8 @@ class UniquePointOrg():
         self.state = 'UP_ret'
 
     def move_clockwise(self, moves):
+        self.dist_to_start += 1
+
         dirs = ['N', 'NW', 'SW', 'S', 'SE', 'NE']
         index = dirs.index(self.bound_dir)
         for i in range(len(dirs)):
@@ -297,6 +306,8 @@ class UniquePointOrg():
                 return move
 
     def move_counterclockwise(self, moves):
+        self.dist_to_start -= 1
+
         if self.bound_dir in moves and self.force_return:
             dirs = ['N', 'NW', 'SW', 'S', 'SE', 'NE']
             index = dirs.index(self.bound_dir)
@@ -424,6 +435,8 @@ class TraverseOnSurfaceLog():
         self.special_return_handling = False
         self.RStoTB = False
 
+        self.pebble_move_count = 0
+
     def reset(self):
         self.state = 'TC'
         self.last_move = ''
@@ -446,6 +459,8 @@ class TraverseOnSurfaceLog():
         self.moved = False
         self.special_return_handling = False
         self.RStoTB = False
+
+        self.pebble_move_count = 0
 
     def update_pos(self, ret):
         if len(ret) == 1:
@@ -593,6 +608,12 @@ class TraverseOnSurfaceLog():
                     move, terminate, is_up = self.up_inst.move(up_moves,  self.translate_move(self.bound_dir))
                 else:
                     move, terminate, is_up = self.up_inst.move(up_moves, self.bound_dir)
+
+                if not globalvars.logarithmic_memory:
+                    # Extrasteps needed to place pebble as counter
+                    globalvars.movecounter['move_pebble'] += 2*self.up_inst.dist_to_start
+                    globalvars.global_move_count += 2*self.up_inst.dist_to_start
+                    self.pebble_move_count += 2*self.up_inst.dist_to_start
 
                 if terminate:
                     self.up_inst.reset()
