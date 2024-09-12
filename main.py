@@ -354,10 +354,9 @@ class Simulator3D(ShowBase):
             if x.z < z_min:
                 z_min = x.z
 
-        add_axis(self.render, x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
-                                             z_max + 0.5, z_min - 0.5)
-
         if not globalvars.onlygenerate:
+            add_axis(self.render, x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
+                     z_max + 0.5, z_min - 0.5)
             self.bounding_box = add_bounding_box(self.render, x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
                                              z_max + 0.5, z_min - 0.5)
         if not globalvars.global_bound_box and not globalvars.onlygenerate:
@@ -554,11 +553,16 @@ class Simulator3D(ShowBase):
             return self.x, self.y, self.z
 
         if pos == 'grab_tile_and_show_hidden_tile':
-            #print("Was here 2")
             self.hidden_tile.hide = False
+            x = self.hidden_tile.x
+            y = self.hidden_tile.y
+            z = self.hidden_tile.z
             self.hidden_tile = None
             self.grab_tile()
-            return self.x, self.y, self.z
+            if globalvars.logarithmic_memory:
+                return self.x, self.y, self.z
+            else:
+                return x,y,z
 
         return self.x, self.y, self.z
 
@@ -618,7 +622,6 @@ class Simulator3D(ShowBase):
         if not self.running:
             return
 
-        globalvars.global_move_count += 1
         self.count += 1
 
         # Get next move from robot
@@ -637,6 +640,27 @@ class Simulator3D(ShowBase):
             #    print(self.robot.place_tile.state)
             #    print(self.robot.place_tile.test_pos_state)
             #    raise "Went in not allowed direction!"
+            if next_move != None:
+                globalvars.global_move_count += 1
+                if self.robot.print_state == 'find_shiftable_row':
+                    if globalvars.logarithmic_memory:
+                        globalvars.movecounter['find_shiftable_row'] += 1
+                    else:
+                        globalvars.movecounter['find_shiftable_row'] += 3
+                        globalvars.global_move_count += 2
+                if self.robot.print_state == 'locally_highest_row':
+                    globalvars.movecounter['locally_highest_row'] += 1
+                if self.robot.print_state == 'shift_or_take':
+                    globalvars.movecounter['shift_or_take'] += 1
+                if self.robot.print_state == 'place_tile':
+                    if globalvars.logarithmic_memory:
+                        globalvars.movecounter['place_tile'] += 1
+                    else:
+                        globalvars.movecounter['place_tile'] += 2
+                        globalvars.global_move_count += 1
+                if self.robot.print_state == 'take_initial_tile':
+                    globalvars.movecounter['take_initial_tile'] += 1
+                #globalvars.movecounter['move_pebble'] = 0
 
         if self.count%globalvars.printsteps == 0:
             pot_x = potential.potential_x(self.grabbed_tile)
@@ -868,7 +892,7 @@ def build_random_configuration():
 
 ap = argparse.ArgumentParser()
 
-ap.add_argument("--visualize", default=True, help="Whether to render the configuration or run the algorithm in the background.")
+ap.add_argument("--visualize", default=False, help="Whether to render the configuration or run the algorithm in the background.")
 ap.add_argument("--tiles", default=100, help="Minimal number of tiles in random configuration.")
 ap.add_argument("--infile", default="C:\\Users\\bergm\\PycharmProjects\\SimulatorAnalysis\\configurations\\tiles180\\config015.txt", help="Configuration to load.")
 ap.add_argument("--outfile", default="demofile.txt", help="Configuration to load.")
@@ -915,8 +939,16 @@ if not globalvars.onlygenerate or globalvars.run_silent:
         #if app.count == 23000:
         #    break
 
-        #if potential.potential_x(app.grabbed_tile) <= 3514 and app.robot.state == 'place_tile':
+        #if app.robot.switched_orientation:
         #    app.stop()
+        #    app.init_visualization()
+        #    app.run()
+        #    break
+
+        #if potential.potential_x(app.grabbed_tile) <= 369 and app.robot.state == 'place_tile':
+        #    app.stop()
+        #    app.init_visualization()
+        #    app.run()
         #    break
 
         #if potential.potential_x(app.grabbed_tile) == 43 and app.robot.place_tile.move_on_surface.traverse_surface.return_to_start:

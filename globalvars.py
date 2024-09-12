@@ -9,6 +9,7 @@ load_file = "demofile.txt"
 #load_file = "tests/randomerror3.txt"
 #load_file = "tests/randomconf1.txt"
 #load_file = "tests/layerswitch2.txt"
+load_file = "C:\\Users\\bergm\\PycharmProjects\\SimulatorAnalysis\\configs_new\\tiles120\\config001.txt"#36
 number_of_tiles = 40
 printsteps = 1000
 

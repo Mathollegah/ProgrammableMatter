@@ -10,6 +10,7 @@ import globalvars
 class ConstRobot():
     def __init__(self):
         self.state = 'find_shiftable_row'
+        self.print_state = 'find_shiftable_row'
         self.carrying_tile = True
         self.switched_orientation = False
 
@@ -121,20 +122,9 @@ class ConstRobot():
         neighbors = self.switch_orientation(neighbors, self.switched_orientation)
         while ret == None and self.state != 'terminate' and not force_exit:
             if self.state == 'find_shiftable_row' and ret == None:
-                if not globalvars.logarithmic_memory:
-                    # Approximation of moves to collect pebbles
-                    globalvars.movecounter['find_shiftable_row'] += 3
-                    globalvars.global_move_count += 2
-                else:
-                    globalvars.movecounter['find_shiftable_row'] += 1
-
+                self.print_state = 'find_shiftable_row'
                 ret = self.find_shiftable_row.move(neighbors)
                 if self.find_shiftable_row.state == 'terminate':
-                    if not globalvars.logarithmic_memory:
-                        # Approximation of extra steps to place pebbles when collecting the start position pebble
-                        globalvars.movecounter['move_pebble'] += self.find_shiftable_row.traverse_surface.pebble_move_count*2
-                        globalvars.global_move_count += self.find_shiftable_row.traverse_surface.pebble_move_count*2
-
                     self.find_shiftable_row.reset()
                     self.state = 'locally_highest_row'
                 if self.find_shiftable_row.state == 'no_shiftable_row_exists':
@@ -149,15 +139,14 @@ class ConstRobot():
                         break
 
             if self.state == 'locally_highest_row' and ret == None:
-                globalvars.movecounter['locally_highest_row'] += 1
+                self.print_state = 'locally_highest_row'
                 ret = self.locally_highest_row.move(neighbors)
                 if self.locally_highest_row.state == 'terminate':
                     self.locally_highest_row.reset()
                     self.state = 'shift_or_take'
 
             if self.state == 'shift_or_take' and ret == None:
-                globalvars.movecounter['shift_or_take'] += 1
-
+                self.print_state = 'shift_or_take'
                 ret = self.shift_or_take.move(neighbors, occupied, self.carrying_tile)
                 if self.shift_or_take.state == 'terminate_place':
                     self.shift_or_take.reset()
@@ -169,14 +158,9 @@ class ConstRobot():
 
             if self.state == 'place_tile' and ret == None:
                 if not self.place_tile.placed_tile:
-                    globalvars.movecounter['place_tile'] += 1
-                    if not globalvars.logarithmic_memory:
-                        # This step is taken two times to collect the pebble marking the hidden tile
-                        globalvars.global_move_count += 1
-                        globalvars.movecounter['take_initial_tile'] += 1
+                    self.print_state = 'place_tile'
                 else:
-                    globalvars.movecounter['take_initial_tile'] += 1
-
+                    self.print_state = 'take_initial_tile'
                 ret = self.place_tile.move(neighbors)
                 if self.place_tile.state == 'terminate':
                     self.place_tile.reset()
@@ -198,7 +182,10 @@ class ConstRobot():
 
             if self.state == 'take_initial_tile' and ret == None:
                 ret = 'grab_tile_and_show_hidden_tile'
-                self.state = 'move_one_down'
+                if globalvars.logarithmic_memory:
+                    self.state = 'move_one_down'
+                else:
+                    self.state = 'find_shiftable_row'
 
             if self.state == 'move_one_down' and ret == None:
                 ret = 'D'

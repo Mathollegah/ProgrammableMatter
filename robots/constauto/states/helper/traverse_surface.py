@@ -436,6 +436,8 @@ class TraverseOnSurfaceLog():
         self.RStoTB = False
 
         self.pebble_move_count = 0
+        self.robot_coords = None
+        self.last_state = None
 
     def reset(self):
         self.state = 'TC'
@@ -461,6 +463,8 @@ class TraverseOnSurfaceLog():
         self.RStoTB = False
 
         self.pebble_move_count = 0
+        self.robot_coords = None
+        self.last_state = None
 
     def update_pos(self, ret):
         if len(ret) == 1:
@@ -535,10 +539,12 @@ class TraverseOnSurfaceLog():
         move = None
 
         if self.x_start == None:
+            self.robot_coords = globalvars.robot_coordinates
             self.x_start = self.x
             self.y_start = self.y
 
-        if self.x == self.x_start and self.y == self.y_start and self.return_to_start:
+        #if self.x == self.x_start and self.y == self.y_start and self.return_to_start:
+        if self.robot_coords == globalvars.robot_coordinates and self.return_to_start:
             self.state = 'terminate'
 
         self.moved_back = True
@@ -551,7 +557,8 @@ class TraverseOnSurfaceLog():
             #print(self.state, self.bound_dir, self.return_to_start)
             if (self.state == 'TC') and (move == None):
                 self.moved_back = False
-                if self.x == self.x_start and self.y == self.y_start and self.moved:
+                #if self.x == self.x_start and self.y == self.y_start and self.moved:
+                if self.robot_coords == globalvars.robot_coordinates and self.moved:
                     self.state = 'terminate'
 
                 if self.state != 'terminate':
@@ -562,8 +569,10 @@ class TraverseOnSurfaceLog():
                         self.state = 'UP'
                         self.bound_dir = 'N'
                         self.up_caller = 'TC'
+                self.last_state = 'TC'
 
             if (self.state == 'RS') and (move == None):
+                self.last_state = 'RS'
                 if 'S' in moves:
                     move = 'S'
                 else:
@@ -590,6 +599,7 @@ class TraverseOnSurfaceLog():
                         break
                 #print("State in TB bound dir2:", self.bound_dir)
                 self.state = 'TB2'
+                self.last_state = 'TB'
 
             if (self.state == 'TB2') and (move == None):
                 self.state = 'TB'
@@ -597,10 +607,15 @@ class TraverseOnSurfaceLog():
                     self.state = 'UP'
                     self.up_caller = 'TB'
                 #                                                and not self.bound_dir in moves
-                if not ('S' in moves) and ((('S' in self.bound_dir or len(moves)==1) and (not self.bound_dir in moves or not self.RStoTB)) or ('NE' == self.bound_dir) and (not 'SE' in moves)): ##xxxxxxxxxxxx
+                if (not ('S' in moves) and ((('S' in self.bound_dir or len(moves)==1) and (not self.bound_dir in moves or not self.RStoTB or self.return_to_start)  and (self.last_move != 'S' or self.last_state != 'RS')) or ('NE' == self.bound_dir) and (not 'SE' in moves))): ##xxxxxxxxxxxx
                     self.state = 'TC'
+                elif not 'N' in moves and not 'S' in moves and not 'NE' in moves and not 'SE' in moves:
+                    self.state = 'TC'
+                #elif not ('N' in moves) and  self.robot_coords == globalvars.robot_coordinates and not 'NW' in moves and not 'SW' in moves:
+                #    self.state = 'terminate'
 
                 self.RStoTB = False
+                self.last_state = 'TB2'
 
 
             if (self.state == 'UP') and (move == None):
@@ -613,7 +628,7 @@ class TraverseOnSurfaceLog():
                     # Extrasteps needed to place pebble as counter
                     globalvars.movecounter['move_pebble'] += 2*self.up_inst.dist_to_start
                     globalvars.global_move_count += 2*self.up_inst.dist_to_start
-                    self.pebble_move_count += 2*self.up_inst.dist_to_start
+                    #self.pebble_move_count += 2*self.up_inst.dist_to_start
 
                 if terminate:
                     self.up_inst.reset()

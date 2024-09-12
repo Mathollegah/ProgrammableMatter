@@ -12,6 +12,7 @@ class MoveOnSurface():
         self.last_move_reverted = None
         self.layer_switch_happend = False
         self.free_spot_direction = None
+        self.forced_move = False
 
     def reset(self):
         self.state = 'move_up'
@@ -23,6 +24,7 @@ class MoveOnSurface():
         self.last_move_reverted = None
         self.layer_switch_happend = False
         self.free_spot_direction = None
+        self.forced_move = False
 
     def translate_directions_to_2D(self, moves):
         directions = []
@@ -113,6 +115,9 @@ class MoveOnSurface():
             tmp = tmp + 'E'
         return tmp
 
+    def first_step_back(self):
+        self.state = 'move_up_and_detect_neighbors'
+        self.forced_move = True
 
     def continue_moving(self):
         self.state = 'move_down'
@@ -127,11 +132,11 @@ class MoveOnSurface():
                     self.level_change_possible = True
 
                 if (directions_2D[(directions_2D.index(self.last_move)+3) % 6] in tmp) and self.level_change_possible:
-                    print("layer switch happend")
+                    #print("layer switch happend")
                     self.layer_switch_happend = True
                     self.last_move_reverted = self.invert_move_2D(self.last_move)
                     self.free_spot_direction = self.translate_directions_to_3D(self.last_move_reverted, ['F', 'B', 'DFR', 'DFL', 'DBR', 'DBL'])
-                    print(self.free_spot_direction)
+                    #print(self.free_spot_direction)
                     #self.traverse_surface.return_to_starting_point()
                     self.traverse_surface.no_unique_point()
                     self.last_move = self.traverse_surface.move([self.last_move_reverted])
@@ -166,7 +171,13 @@ class MoveOnSurface():
             if 'U' in moves:
                 return 'U'
 
+            if self.forced_move:
+                self.directions = [self.last_move_reverted]
+                self.forced_move = False
+
             self.last_move = self.traverse_surface.move(self.directions)
+            if self.last_move != None:
+                self.last_move_reverted = self.invert_move_2D(self.last_move)
 
             if self.traverse_surface.state == 'terminate':
                 self.state = 'terminate'

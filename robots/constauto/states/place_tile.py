@@ -3,7 +3,7 @@ from robots.constauto.states.helper.move_on_surface import *
 
 class PlaceTile():
     def __init__(self):
-        self.state = 'move_on_surface'
+        self.state = 'move_down'#'move_on_surface'
         self.x = 0
         self.move_on_surface = MoveOnSurface()
         self.move_on_bottom = MoveOnSurface()
@@ -15,7 +15,7 @@ class PlaceTile():
         self.detected_tile_below = False
 
     def reset(self):
-        self.state = 'move_on_surface'
+        self.state = 'move_down'#'move_on_surface'
         self.x = 0
         self.move_on_surface.reset()
         self.move_on_bottom.reset()
@@ -45,9 +45,11 @@ class PlaceTile():
 
     def move(self, moves):
         ret = None
+
         #print(self.state)
         if self.state == 'move_on_surface' and ret == None:
             ret = self.move_on_surface.move(moves)
+
             if self.move_on_surface.layer_switch_happend and not self.placed_tile:
                 self.last_move = self.move_on_surface.free_spot_direction
 
@@ -105,6 +107,7 @@ class PlaceTile():
             ret = 'place_tile'
             self.placed_tile = True
             self.move_on_surface.traverse_surface.return_to_starting_point()
+            self.move_on_surface.first_step_back()
             self.state = 'return_to_tower'
 
         if self.state == 'return_to_tower' and ret == None:
@@ -271,11 +274,6 @@ class PlaceTile():
             #else:
             self.state = 'move_on_surface'
             self.move_on_surface.continue_moving()
-
-        if not globalvars.logarithmic_memory and ret == 'place_tile':
-            # Approximation of extra steps to move pebbles when collecting pebble from starting point
-            globalvars.movecounter['move_pebble'] += self.move_on_surface.traverse_surface.pebble_move_count
-            globalvars.global_move_count += self.move_on_surface.traverse_surface.pebble_move_count
 
         return ret
 
