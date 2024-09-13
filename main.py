@@ -317,14 +317,14 @@ class Simulator3D(ShowBase):
         self.hidden_tile = None
         self.hidden = False
         if not globalvars.onlygenerate:
-            self.scene = self.loader.loadModel("models/robot.glb")
+            self.scene = self.loader.loadModel("../../../../objects/robot.glb")
             self.scene.reparentTo(self.render)
             self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
             self.scene.setPos(self.x, self.y, self.z)
             self.bounding_box = None
 
             for x in globalvars.dodecahedrons:
-                x.scene = self.loader.loadModel("models/dodeca.glb")
+                x.scene = self.loader.loadModel("../../../../objects/dodeca.glb")
                 x.scene.reparentTo(self.render)
                 x.scene.setTransparency(True)
                 x.scene.setColor(1, 1, 1, 1.0)
@@ -656,7 +656,8 @@ class Simulator3D(ShowBase):
                     if globalvars.logarithmic_memory:
                         globalvars.movecounter['place_tile'] += 1
                     else:
-                        globalvars.movecounter['place_tile'] += 2
+                        globalvars.movecounter['take_initial_tile'] += 1
+                        globalvars.movecounter['place_tile'] += 1
                         globalvars.global_move_count += 1
                 if self.robot.print_state == 'take_initial_tile':
                     globalvars.movecounter['take_initial_tile'] += 1
@@ -892,9 +893,9 @@ def build_random_configuration():
 
 ap = argparse.ArgumentParser()
 
-ap.add_argument("--visualize", default=False, help="Whether to render the configuration or run the algorithm in the background.")
+ap.add_argument("--visualize", default=True, help="Whether to render the configuration or run the algorithm in the background.")
 ap.add_argument("--tiles", default=100, help="Minimal number of tiles in random configuration.")
-ap.add_argument("--infile", default="C:\\Users\\bergm\\PycharmProjects\\SimulatorAnalysis\\configurations\\tiles180\\config015.txt", help="Configuration to load.")
+ap.add_argument("--infile", default="", help="Configuration to load.")
 ap.add_argument("--outfile", default="demofile.txt", help="Configuration to load.")
 ap.add_argument("--random", default=True, help="Whether a random configuration should be created.")
 ap.add_argument("--boxsize", default=25, help="Size of box in which the random configuration is created..")
@@ -959,10 +960,13 @@ if not globalvars.onlygenerate or globalvars.run_silent:
         #    app.stop()
         #    break
 
-        #if app.robot.switched_orientation and potential.potential_z(app.grabbed_tile) == 22:
+        #if app.robot.state == 'terminate':
         #    app.stop()
-        #    print(app.robot.state)
-        #    print(app.robot.place_tile.state)
+        #    app.init_visualization()
+        #    app.run()
+        #    print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(
+        #        potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(
+        #        potential.potential_z(app.grabbed_tile)))
         #    break
 
         #if app.robot.switched_orientation:
