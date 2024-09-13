@@ -317,14 +317,14 @@ class Simulator3D(ShowBase):
         self.hidden_tile = None
         self.hidden = False
         if not globalvars.onlygenerate:
-            self.scene = self.loader.loadModel("../../../../objects/robot.glb")
+            self.scene = self.loader.loadModel("../../../../../objects/robot.glb")
             self.scene.reparentTo(self.render)
             self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
             self.scene.setPos(self.x, self.y, self.z)
             self.bounding_box = None
 
             for x in globalvars.dodecahedrons:
-                x.scene = self.loader.loadModel("../../../../objects/dodeca.glb")
+                x.scene = self.loader.loadModel("../../../../../objects/dodeca.glb")
                 x.scene.reparentTo(self.render)
                 x.scene.setTransparency(True)
                 x.scene.setColor(1, 1, 1, 1.0)
