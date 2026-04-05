@@ -6,7 +6,6 @@ from direct.gui.OnscreenText import OnscreenText
 from direct.task import Task
 from potential import potential
 import random
-import argparse
 from game.game import Game, Dodecahedron
 
 ##############################################################################
@@ -53,9 +52,6 @@ class Simulator3D(ShowBase, Game):
 
         if globalvars.load_file == "":
             tmp = random.choice(globalvars.dodecahedrons)
-            #for i in globalvars.dodecahedrons:
-            #    if i.z > tmp.x:
-            #        tmp = i
             globalvars.global_start_node = tmp
 
         self.interpolation_move = 0
@@ -92,14 +88,14 @@ class Simulator3D(ShowBase, Game):
         self.hidden_tile = None
         self.hidden = False
         if not globalvars.onlygenerate:
-            self.scene = self.loader.loadModel("../../../../../objects/robot.glb")
+            self.scene = self.loader.loadModel("./objects/robot.glb")
             self.scene.reparentTo(self.render)
             self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
             self.scene.setPos(self.x, self.y, self.z)
             self.bounding_box = None
 
             for x in globalvars.dodecahedrons:
-                x.scene = self.loader.loadModel("../../../../../objects/dodeca.glb")
+                x.scene = self.loader.loadModel("./objects/dodeca.glb")
                 x.scene.reparentTo(self.render)
                 x.scene.setTransparency(True)
                 x.scene.setColor(1, 1, 1, 1.0)

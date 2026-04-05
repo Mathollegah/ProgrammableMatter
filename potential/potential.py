@@ -62,3 +62,8 @@ def potential_z(robot_tile):
         else:
             tile.pot_z = 0
     return pot
+
+
+def potential(robot_tile):
+    return potential_x(robot_tile) + potential_z(robot_tile)
+

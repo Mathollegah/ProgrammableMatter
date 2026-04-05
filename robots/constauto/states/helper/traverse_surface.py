@@ -626,7 +626,6 @@ class TraverseOnSurfaceLog():
 
                 if not globalvars.logarithmic_memory:
                     # Extrasteps needed to place pebble as counter
-                    globalvars.movecounter['move_pebble'] += 2*self.up_inst.dist_to_start
                     globalvars.global_move_count += 2*self.up_inst.dist_to_start
                     #self.pebble_move_count += 2*self.up_inst.dist_to_start
 

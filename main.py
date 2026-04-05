@@ -1,41 +1,13 @@
-import simplepbr
 import globalvars
 from robots.constauto.robot import *
-from direct.showbase.ShowBase import ShowBase
-from direct.gui.OnscreenText import OnscreenText
-from direct.task import Task
 from potential import potential
 import random
 import argparse
 from visualization.visualization import Simulator3D
-from game.game import Dodecahedron
-
-##############################################################################
-
-from direct.showbase.ShowBase import ShowBase
-from direct.showbase.DirectObject import DirectObject
-from panda3d.core import GeomVertexFormat, GeomVertexData
-from panda3d.core import Geom, GeomTriangles, GeomVertexWriter
-from panda3d.core import Texture, GeomNode
-from panda3d.core import PerspectiveLens
-from panda3d.core import Light, Spotlight
-from panda3d.core import LVector3
-from direct.directtools.DirectGeometry import LineNodePath
-from panda3d.core import Vec4
-
-from panda3d.core import (
-    Geom,
-    GeomNode,
-    GeomTriangles,
-    GeomVertexData,
-    GeomVertexFormat,
-    GeomVertexWriter,
-)
+from game.game import Dodecahedron, Game
 
 
 
-
-# Build configuration
 def build_new_configuration():
     if globalvars.load_file == "" and not globalvars.random_configuration:
         globalvars.dodecahedrons = [Dodecahedron(0,0,0)]
@@ -159,6 +131,7 @@ def build_new_configuration():
                 break
 
 
+
 def build_random_configuration():
     def pick_position(boxsize):
         x = random.choice(list(range(boxsize)))
@@ -248,6 +221,7 @@ ap.add_argument("--printsteps", default=1000, help="Minimal number of tiles in r
 ap.add_argument("--onlygenerate", default=False, help="Minimal number of tiles in random configuration.")
 ap.add_argument("--logarithmic", default=False, help="Whether to use logarithmic or constant memory.")
 ap.add_argument("--runsilent", default=False, help="Whether to use logarithmic or constant memory.")
+ap.add_argument("--trainmodel", default=False, help="Use this option to train an algorithm.")
 
 args = vars(ap.parse_args())
 globalvars.visualize = args["visualize"]
@@ -260,74 +234,33 @@ globalvars.printsteps = int(args["printsteps"])
 globalvars.onlygenerate = bool(args["onlygenerate"])
 globalvars.logarithmic_memory = bool(args["logarithmic"])
 globalvars.run_silent = bool(args["runsilent"])
+globalvars.trainmodel = bool(args["trainmodel"])
 
-globalvars.movecounter['find_shiftable_row'] = 0
-globalvars.movecounter['locally_highest_row'] = 0
-globalvars.movecounter['shift_or_take'] = 0
-globalvars.movecounter['place_tile'] = 0
-globalvars.movecounter['take_initial_tile'] = 0
-globalvars.movecounter['move_pebble'] = 0
 
 build_new_configuration()
 
 
-app = Simulator3D()
+if not globalvars.trainmodel:
+    app = Simulator3D()
 
-if not globalvars.onlygenerate or globalvars.run_silent:
-    print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(
-        potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(
-        potential.potential_z(app.grabbed_tile)))
+    if not globalvars.onlygenerate or globalvars.run_silent:
+        print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(
+            potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(
+            potential.potential_z(app.grabbed_tile)))
 
-    #app.run()
-    while not globalvars.visualize:
-        app.moveRobotNoAnimation()
+        #app.run()
+        while not globalvars.visualize:
+            app.moveRobotNoAnimation()
 
-        #if app.count == 23000:
-        #    break
-
-        #if app.robot.switched_orientation:
-        #    app.stop()
-        #    app.init_visualization()
-        #    app.run()
-        #    break
-
-        #if potential.potential_x(app.grabbed_tile) <= 369 and app.robot.state == 'place_tile':
-        #    app.stop()
-        #    app.init_visualization()
-        #    app.run()
-        #    break
-
-        #if potential.potential_x(app.grabbed_tile) == 43 and app.robot.place_tile.move_on_surface.traverse_surface.return_to_start:
-        #    app.stop()
-        #    break
-
-        #if potential.potential_x(app.grabbed_tile) == 0 and potential.potential_z(app.grabbed_tile) == 44:
-        #    app.stop()
-        #    break
-
-        #if app.robot.state == 'terminate':
-        #    app.stop()
-        #    app.init_visualization()
-        #    app.run()
-        #    print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(
-        #        potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(
-        #        potential.potential_z(app.grabbed_tile)))
-        #    break
-
-        #if app.robot.switched_orientation:
-            #if app.hidden_tile != None:
-            #    app.hidden_tile.hide = False
-            #    app.hidden_tile = None
-            #break
-
-        if app.robot.state == 'terminate':
-            print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(app.grabbed_tile)))
-            print(globalvars.movecounter)
-            break
+            if app.robot.state == 'terminate':
+                print("Count: " + str(globalvars.global_move_count) + ", Potential_X: " + str(potential.potential_x(app.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(app.grabbed_tile)))
+                break
 
 
-    if globalvars.visualize:
-        app.init_visualization()
-        app.run()
+        if globalvars.visualize:
+            app.init_visualization()
+            app.run()
 
-    print("Number of Dodecahedrons: ", len(globalvars.dodecahedrons))
+        print("Number of Dodecahedrons: ", len(globalvars.dodecahedrons))
+else:
+    game = Game()

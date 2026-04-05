@@ -5,7 +5,6 @@ from robots.constauto.states.shift_or_take import *
 
 from robots.constauto.states.place_tile import *
 
-import globalvars
 
 class ConstRobot():
     def __init__(self):

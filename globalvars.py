@@ -23,7 +23,6 @@ new_interpolation_steps = interpolation_steps
 random_configuration = True
 boxsize = 30
 
-movecounter = {}
 
 visualize = False
 onlygenerate = False
@@ -40,3 +39,4 @@ pot = (100000, 00000)
 pot_equal_count = 0
 
 run_silent = True
+trainmodel = False

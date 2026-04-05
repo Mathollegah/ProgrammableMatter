@@ -148,7 +148,6 @@ class Dodecahedron:
 
 class Game():
     def __init__(self, player):
-
         self.running = True
         self.count = 0
 
