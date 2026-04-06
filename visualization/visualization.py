@@ -1,5 +1,4 @@
 import simplepbr
-import globalvars
 from robots.constauto.robot import *
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
@@ -34,8 +33,8 @@ from panda3d.core import (
 
 
 class Simulator3D(ShowBase, Game):
-    def __init__(self):
-        if not globalvars.onlygenerate:
+    def __init__(self, player, config, state):
+        if not config.onlygenerate:
             ShowBase.__init__(self)
             simplepbr.init()
         self.accept('s', self.stop)
@@ -50,17 +49,19 @@ class Simulator3D(ShowBase, Game):
         self.running = True
         self.count = 0
 
-        if globalvars.load_file == "":
-            tmp = random.choice(globalvars.dodecahedrons)
-            globalvars.global_start_node = tmp
+        if config.load_file == "":
+            tmp = random.choice(state.dodecahedrons)
+            state.global_start_node = tmp
 
         self.interpolation_move = 0
         self.step = 0
-        self.robot = ConstRobot()
+        self.robot = player
+        self.config = config
+        self.state = state
 
-        tmp = Dodecahedron(globalvars.global_start_node.x, globalvars.global_start_node.y,
-                           globalvars.global_start_node.z)
-        globalvars.dodecahedrons.append(tmp)
+        tmp = Dodecahedron(self.state.global_start_node.x, self.state.global_start_node.y,
+                           self.state.global_start_node.z)
+        self.state.dodecahedrons.append(tmp)
         self.grabbed_tile = tmp
 
         self.x = tmp.x
@@ -71,13 +72,13 @@ class Simulator3D(ShowBase, Game):
         self.inter_y = self.y
         self.inter_z = self.z
 
-        globalvars.robot_coordinates = (self.x, self.y, self.z)
+        self.state.robot_coordinates = (self.x, self.y, self.z)
 
         # Model complete, store in file
-        if globalvars.load_file == "":
-            f = open(globalvars.store_file, "w")
+        if self.config.load_file == "":
+            f = open(self.config.store_file, "w")
             f.writelines(str(self.x) + " " +  str(self.y) + " " + str(self.z) + " ")
-            for dodec in globalvars.dodecahedrons:
+            for dodec in self.state.dodecahedrons:
                 f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
             f.close()
 
@@ -87,14 +88,14 @@ class Simulator3D(ShowBase, Game):
 
         self.hidden_tile = None
         self.hidden = False
-        if not globalvars.onlygenerate:
+        if not self.config.onlygenerate:
             self.scene = self.loader.loadModel("./objects/robot.glb")
             self.scene.reparentTo(self.render)
             self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
             self.scene.setPos(self.x, self.y, self.z)
             self.bounding_box = None
 
-            for x in globalvars.dodecahedrons:
+            for x in self.state.dodecahedrons:
                 x.scene = self.loader.loadModel("./objects/dodeca.glb")
                 x.scene.reparentTo(self.render)
                 x.scene.setTransparency(True)
@@ -109,7 +110,7 @@ class Simulator3D(ShowBase, Game):
         y_min = 100
         z_max = -100
         z_min = 100
-        for x in globalvars.dodecahedrons:
+        for x in self.state.dodecahedrons:
             if x.x > x_max:
                 x_max = x.x
             if x.x < x_min:
@@ -125,20 +126,20 @@ class Simulator3D(ShowBase, Game):
             if x.z < z_min:
                 z_min = x.z
 
-        if not globalvars.onlygenerate:
+        if not self.config.onlygenerate:
             self.add_axis(x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
                      z_max + 0.5, z_min - 0.5)
             self.bounding_box = self.add_bounding_box(x_max + 0.5, x_min - 0.5, y_max + 0.5, y_min - 0.5,
                                              z_max + 0.5, z_min - 0.5)
-        if not globalvars.global_bound_box and not globalvars.onlygenerate:
+        if not self.config.global_bound_box and not self.config.onlygenerate:
             self.bounding_box.hide()
 
         # Add the move robot procedure.
-        if not globalvars.onlygenerate:
+        if not self.config.onlygenerate:
             self.taskMgr.add(self.moveRobotAnimation, "MoveRobot")
 
         # Add potential score
-        if not globalvars.onlygenerate:
+        if not self.config.onlygenerate:
             self.textObject = OnscreenText(text='Potential: 0', pos=(-0.7, 0.9), scale=0.07)
 
 
@@ -235,8 +236,8 @@ class Simulator3D(ShowBase, Game):
                 self.hidden_tile.scene.hide()
 
     def hide_bounding_box(self):
-        globalvars.global_bound_box = not globalvars.global_bound_box
-        if not globalvars.global_bound_box:
+        self.config.global_bound_box = not self.config.global_bound_box
+        if not self.config.global_bound_box:
             self.bounding_box.show()
         else:
             self.bounding_box.hide()
@@ -246,20 +247,20 @@ class Simulator3D(ShowBase, Game):
         print("Pause")
 
     def slower(self):
-        globalvars.new_interpolation_steps += 3
+        self.config.new_interpolation_steps += 3
 
     def faster(self):
-        if globalvars.new_interpolation_steps > 3:
-            globalvars.new_interpolation_steps -= 3
+        if self.config.new_interpolation_steps > 3:
+            self.config.new_interpolation_steps -= 3
 
     def hide_not_pot_zero(self):
         tower_lst = []
-        for tile in globalvars.dodecahedrons:
+        for tile in self.state.dodecahedrons:
             if (tile.pot_x, tile.pot_z) != (0, 0):
                 tower_lst.append((tile.x, tile.y))
 
         print(tower_lst)
-        for tile in globalvars.dodecahedrons:
+        for tile in self.state.dodecahedrons:
             if (tile.pot_x, tile.pot_z) == (0, 0) and not (tile.x, tile.y) in tower_lst:
                 #tile.scene.hide()
                 tile.scene.setTransparency(True)
@@ -267,7 +268,7 @@ class Simulator3D(ShowBase, Game):
 
 
     def init_visualization(self):
-        for dod in globalvars.dodecahedrons:
+        for dod in self.state.dodecahedrons:
             dod.scene.setPos(dod.x, dod.y, dod.z)
 
     # Define a procedure to move the robot.
@@ -275,7 +276,7 @@ class Simulator3D(ShowBase, Game):
         if not self.running:
             return Task.cont
         
-        steps = globalvars.interpolation_steps
+        steps = self.config.interpolation_steps
         if self.interpolation_move == 0:
             # Get next move from robot
             self.inter_x = self.x
@@ -296,14 +297,14 @@ class Simulator3D(ShowBase, Game):
             self.grabbed_tile.scene.setPos(inter_x, inter_y, inter_z)
 
         if self.interpolation_move == steps+1:
-            self.textObject.setText("Potential_X: " + str(potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(potential.potential_z(self.grabbed_tile)))
+            self.textObject.setText("Potential_X: " + str(self.state.potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(self.state.potential.potential_z(self.grabbed_tile)))
             self.interpolation_move = 0
             self.x = self.x_next
             self.y = self.y_next
             self.z = self.z_next
 
-            globalvars.robot_coordinates = (self.x, self.y, self.z)
-            globalvars.interpolation_steps = globalvars.new_interpolation_steps
+            self.state.robot_coordinates = (self.x, self.y, self.z)
+            self.config.interpolation_steps = self.config.new_interpolation_steps
 
             if self.grabbed_tile != None:
                 self.grabbed_tile.x = self.x

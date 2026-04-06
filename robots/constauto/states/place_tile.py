@@ -2,11 +2,12 @@ import globalvars
 from robots.constauto.states.helper.move_on_surface import *
 
 class PlaceTile():
-    def __init__(self):
+    def __init__(self, state):
+        self.gstate = state
         self.state = 'move_down'#'move_on_surface'
         self.x = 0
-        self.move_on_surface = MoveOnSurface()
-        self.move_on_bottom = MoveOnSurface()
+        self.move_on_surface = MoveOnSurface(state)
+        self.move_on_bottom = MoveOnSurface(state)
         self.placed_tile = False
         self.directions = []
         self.last_move = None
@@ -134,7 +135,7 @@ class PlaceTile():
             else:
                 self.state = 'move_up'
 
-        if self.state == 'test_position' and ret == None and not globalvars.logarithmic_memory:
+        if self.state == 'test_position' and ret == None and not self.gstate.logarithmic_memory:
             run = True
             while (ret == None) and run:
                 if self.test_pos_state == 'move_front' and (ret == None):
@@ -239,9 +240,9 @@ class PlaceTile():
                 if ret == 'place_tile':
                     self.move_on_surface.traverse_surface.return_to_starting_point()
 
-        if self.state == 'test_position' and ret == None and globalvars.logarithmic_memory:
+        if self.state == 'test_position' and ret == None and self.gstate.logarithmic_memory:
             if self.test_pos_state == 'move_front' and (ret == None):
-                if globalvars.robot_z_coord - 1 >= globalvars.min_z_coord:
+                if self.gstate.robot_z_coord - 1 >= self.gstate.min_z_coord:
                     ret = 'D'
                     self.test_pos_state = 'place_and_up'
                 else:

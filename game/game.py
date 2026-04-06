@@ -147,34 +147,36 @@ class Dodecahedron:
 
 
 class Game():
-    def __init__(self, player):
+    def __init__(self, player, config, state):
         self.running = True
         self.count = 0
 
-        if globalvars.load_file == "":
-            tmp = random.choice(globalvars.dodecahedrons)
-            globalvars.global_start_node = tmp
+        if config.load_file == "":
+            tmp = random.choice(state.dodecahedrons)
+            state.global_start_node = tmp
 
         self.interpolation_move = 0
         self.step = 0
         self.robot = player
+        self.config = config
+        self.state = state
 
-        tmp = Dodecahedron(globalvars.global_start_node.x, globalvars.global_start_node.y,
-                           globalvars.global_start_node.z)
-        globalvars.dodecahedrons.append(tmp)
+        tmp = Dodecahedron(state.global_start_node.x, state.global_start_node.y,
+                           state.global_start_node.z)
+        state.dodecahedrons.append(tmp)
         self.grabbed_tile = tmp
 
         self.x = tmp.x
         self.y = tmp.y
         self.z = tmp.z
 
-        globalvars.robot_coordinates = (self.x, self.y, self.z)
+        state.robot_coordinates = (self.x, self.y, self.z)
 
         # Model complete, store in file
-        if globalvars.load_file == "":
-            f = open(globalvars.store_file, "w")
+        if config.load_file == "":
+            f = open(config.store_file, "w")
             f.writelines(str(self.x) + " " +  str(self.y) + " " + str(self.z) + " ")
-            for dodec in globalvars.dodecahedrons:
+            for dodec in state.dodecahedrons:
                 f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
             f.close()
 
@@ -184,14 +186,14 @@ class Game():
 
         self.hidden_tile = None
         self.hidden = False
-        if not globalvars.onlygenerate:
+        if not config.onlygenerate:
             self.scene = self.loader.loadModel("../../../../../objects/robot.glb")
             self.scene.reparentTo(self.render)
             self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
             self.scene.setPos(self.x, self.y, self.z)
             self.bounding_box = None
 
-            for x in globalvars.dodecahedrons:
+            for x in state.dodecahedrons:
                 x.scene = self.loader.loadModel("../../../../../objects/dodeca.glb")
                 x.scene.reparentTo(self.render)
                 x.scene.setTransparency(True)
@@ -206,7 +208,7 @@ class Game():
         y_min = 100
         z_max = -100
         z_min = 100
-        for x in globalvars.dodecahedrons:
+        for x in state.dodecahedrons:
             if x.x > x_max:
                 x_max = x.x
             if x.x < x_min:
@@ -224,7 +226,7 @@ class Game():
 
 
     def detect_occupied(self):
-        for x in globalvars.dodecahedrons:
+        for x in self.state.dodecahedrons:
             if (x.x, x.y, x.z) == (self.x, self.y, self.z):
                 if x != self.grabbed_tile:
                     return True
@@ -233,7 +235,7 @@ class Game():
     def detect_neighbors(self):
         # search neighbors
         movable = []
-        for x in globalvars.dodecahedrons:
+        for x in self.state.dodecahedrons:
             if not x.hide:
                 if not self.robot.switched_orientation:
                     if (x.x, x.y, x.z) == (self.x, self.y, self.z + 1):
@@ -284,7 +286,7 @@ class Game():
 
     def grab_tile(self):
         tile = None
-        for i in globalvars.dodecahedrons:
+        for i in self.state.dodecahedrons:
             if (i.x, i.y, i.z) == (self.x, self.y, self.z):
                 tile = i
                 break
@@ -300,7 +302,7 @@ class Game():
 
     def place_tile(self):
         count = 0
-        for i in globalvars.dodecahedrons:
+        for i in self.state.dodecahedrons:
             if (i.x, i.y, i.z) == (self.x, self.y, self.z):
                 count = count + 1
                 break
@@ -310,7 +312,7 @@ class Game():
         if self.grabbed_tile == None:
             raise Exception("Error: Carrying no tile. Tile can not be placed.")
 
-        self.grabbed_tile.find_neighbours(globalvars.dodecahedrons)
+        self.grabbed_tile.find_neighbours(self.state.dodecahedrons)
         self.grabbed_tile = None
 
     def act_move(self, pos):
@@ -372,7 +374,7 @@ class Game():
             z = self.hidden_tile.z
             self.hidden_tile = None
             self.grab_tile()
-            if globalvars.logarithmic_memory:
+            if self.state.logarithmic_memory:
                 return self.x, self.y, self.z
             else:
                 return x,y,z
@@ -392,7 +394,7 @@ class Game():
             self.y = self.y_next
             self.z = self.z_next
 
-            globalvars.robot_coordinates = (self.x, self.y, self.z)
+            self.state.robot_coordinates = (self.x, self.y, self.z)
 
             if self.grabbed_tile != None:
                 self.grabbed_tile.x = self.x
