@@ -1,23 +1,22 @@
-import globalvars
 from robots.constauto.states.find_shiftable_row import *
 from robots.constauto.states.locally_highest_row import *
 from robots.constauto.states.shift_or_take import *
 
 from robots.constauto.states.place_tile import *
 
-import globalvars
 
 class ConstRobot():
-    def __init__(self):
+    def __init__(self, state):
         self.state = 'find_shiftable_row'
         self.print_state = 'find_shiftable_row'
         self.carrying_tile = True
         self.switched_orientation = False
+        self.gstate = state
 
-        self.find_shiftable_row = FindShiftableRow()
+        self.find_shiftable_row = FindShiftableRow(state)
         self.locally_highest_row = LocallyHighestRow()
         self.shift_or_take = ShiftOrTake()
-        self.place_tile = PlaceTile()
+        self.place_tile = PlaceTile(state)
 
     def switch_orientation(self, moves, switched):
         if not switched:
@@ -107,14 +106,13 @@ class ConstRobot():
 
 
     def next_move(self, neighbors, occupied):
-        if globalvars.logarithmic_memory:
+        if self.gstate.logarithmic_memory:
             if not self.switched_orientation:
-                globalvars.robot_z_coord = globalvars.robot_coordinates[2]
+                self.gstate.robot_z_coord = self.gstate.robot_coordinates[2]
             else:
-                globalvars.robot_z_coord = globalvars.robot_coordinates[0]
-        if globalvars.robot_z_coord < globalvars.min_z_coord:
-            globalvars.min_z_coord = globalvars.robot_z_coord
-
+                self.gstate.robot_z_coord = self.gstate.robot_coordinates[0]
+        if self.gstate.robot_z_coord < self.gstate.min_z_coord:
+            self.gstate.min_z_coord = self.gstate.robot_z_coord
         ret = None
         force_exit = False
         neighbors = self.switch_orientation(neighbors, self.switched_orientation)
@@ -132,7 +130,7 @@ class ConstRobot():
                     if self.switched_orientation:
                         self.state = 'terminate'
                     else:
-                        globalvars.min_z_coord = 10000
+                        self.state.min_z_coord = 10000
                         self.switched_orientation = True
                         force_exit = True
                         self.state = 'find_shiftable_row'
@@ -168,7 +166,7 @@ class ConstRobot():
                     if self.switched_orientation:
                         self.state = 'terminate'
                     else:
-                        globalvars.min_z_coord = 10000
+                        self.state.min_z_coord = 10000
                         self.switched_orientation = True
                         self.state = 'find_shiftable_row'
                         break
@@ -182,7 +180,7 @@ class ConstRobot():
 
             if self.state == 'take_initial_tile' and ret == None:
                 ret = 'grab_tile_and_show_hidden_tile'
-                if globalvars.logarithmic_memory:
+                if self.gstate.logarithmic_memory:
                     self.state = 'move_one_down'
                 else:
                     self.state = 'find_shiftable_row'

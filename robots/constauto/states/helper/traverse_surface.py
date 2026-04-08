@@ -2,7 +2,8 @@ import globalvars
 
 
 class TraverseOnSurfaceDFS():
-    def __init__(self):
+    def __init__(self, state):
+        self.gstate = state
         self.x = 0
         self.y = 0
 
@@ -239,7 +240,8 @@ class UniquePoint():
 
 
 class UniquePointOrg():
-    def __init__(self):
+    def __init__(self, state):
+        self.state = state
         self.state = 'Init'
         self.up_x = 0
         self.up_y = 0
@@ -411,8 +413,9 @@ class UniquePointOrg():
 
 
 class TraverseOnSurfaceLog():
-    def __init__(self):
-        self.up_inst = UniquePointOrg()
+    def __init__(self, state):
+        self.up_inst = UniquePointOrg(state)
+        self.gstate = state
         self.state = 'TC'
         self.last_move = ''
         self.bound_dir = ''
@@ -489,9 +492,6 @@ class TraverseOnSurfaceLog():
 
     def return_to_starting_point(self):
         self.return_to_start = True
-        #self.last_move = self.translate_move(self.last_move)
-        #print("Was here", self.bound_dir, self.state, self.up_inst.state, self.up_inst.bound_dir)
-        #self.bound_dir = self.translate_move(self.bound_dir)
         if self.state == 'UP':
             self.up_inst.force_return_func()
         self.special_return_handling = True
@@ -501,8 +501,6 @@ class TraverseOnSurfaceLog():
             self.state = 'TB'
         elif self.state == 'TC':
             self.state = 'RS'
-        #if 'UP' in self.state:
-        #    self.up_inst.state = 'UP_ret'
 
     def translate_move(self, move):
         if move == None:
@@ -519,8 +517,6 @@ class TraverseOnSurfaceLog():
 
 
     def move(self, moves):
-        #print(self.bound_dir)
-        #print(self.state, self.return_to_start)
         up_moves = [i for i in moves]
         if self.return_to_start:
             tmp_moves = [self.translate_move(i) for i in moves]
@@ -539,26 +535,19 @@ class TraverseOnSurfaceLog():
         move = None
 
         if self.x_start == None:
-            self.robot_coords = globalvars.robot_coordinates
+            self.robot_coords = self.gstate.robot_coordinates
             self.x_start = self.x
             self.y_start = self.y
 
-        #if self.x == self.x_start and self.y == self.y_start and self.return_to_start:
-        if self.robot_coords == globalvars.robot_coordinates and self.return_to_start:
+        if self.robot_coords == self.gstate.robot_coordinates and self.return_to_start:
             self.state = 'terminate'
 
         self.moved_back = True
 
-        #if self.bound_dir == 'NE' and not ('SE' in moves):
-        #    print("Was here!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        #    self.bound_dir = 'SE'
-
         while (move == None) and (self.state != 'terminate'):
-            #print(self.state, self.bound_dir, self.return_to_start)
             if (self.state == 'TC') and (move == None):
                 self.moved_back = False
-                #if self.x == self.x_start and self.y == self.y_start and self.moved:
-                if self.robot_coords == globalvars.robot_coordinates and self.moved:
+                if self.robot_coords == self.gstate.robot_coordinates and self.moved:
                     self.state = 'terminate'
 
                 if self.state != 'terminate':
@@ -584,20 +573,16 @@ class TraverseOnSurfaceLog():
                 self.moved_back = False
                 dirs = ['N', 'NE', 'SE', 'S', 'SW', 'NW']
                 index = dirs.index(self.bound_dir)
-                #print("State in TB bound dir1:", self.bound_dir)
-                #print(moves, up_moves)
                 for i in range(6):
                     if dirs[(index + i) % len(dirs)] in moves:
                         move = dirs[(index + i) % len(dirs)]
-                        #print("IN TB move:", move, self.bound_dir, i)
                         if i == 0:
-                            #print("Was herreeeee")
                             self.bound_dir = dirs[(index + i - 1) % len(dirs)]
                         else:
                             self.bound_dir = dirs[(index + i - 2) % len(dirs)]
                         self.state = 'TB'
                         break
-                #print("State in TB bound dir2:", self.bound_dir)
+
                 self.state = 'TB2'
                 self.last_state = 'TB'
 
@@ -611,8 +596,6 @@ class TraverseOnSurfaceLog():
                     self.state = 'TC'
                 elif not 'N' in moves and not 'S' in moves and not 'NE' in moves and not 'SE' in moves:
                     self.state = 'TC'
-                #elif not ('N' in moves) and  self.robot_coords == globalvars.robot_coordinates and not 'NW' in moves and not 'SW' in moves:
-                #    self.state = 'terminate'
 
                 self.RStoTB = False
                 self.last_state = 'TB2'
@@ -624,11 +607,9 @@ class TraverseOnSurfaceLog():
                 else:
                     move, terminate, is_up = self.up_inst.move(up_moves, self.bound_dir)
 
-                if not globalvars.logarithmic_memory:
+                if not self.gstate.logarithmic_memory:
                     # Extrasteps needed to place pebble as counter
-                    globalvars.movecounter['move_pebble'] += 2*self.up_inst.dist_to_start
-                    globalvars.global_move_count += 2*self.up_inst.dist_to_start
-                    #self.pebble_move_count += 2*self.up_inst.dist_to_start
+                    self.gstate.global_move_count += 2*self.up_inst.dist_to_start
 
                 if terminate:
                     self.up_inst.reset()
@@ -647,12 +628,9 @@ class TraverseOnSurfaceLog():
 
                 # Directly return to avoid translation of move
                 if move != None:
-                    #self.last_move = move
                     self.update_pos(move)
                     if self.return_to_start:
                         self.bound_dir = self.translate_move(self.bound_dir)
-                    #print("Move and Bound Dir UP: ", move, self.bound_dir, self.state)
-                    #print(moves, up_moves)
                     return move
 
         if self.return_to_start:
@@ -664,6 +642,4 @@ class TraverseOnSurfaceLog():
             self.update_pos(move)
 
         self.moved = True
-        #print("Move and Bound Dir: ", move, self.bound_dir, self.state)
-        #print(moves, up_moves, self.return_to_start)
         return move

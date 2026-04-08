@@ -1,9 +1,10 @@
 from robots.constauto.states.helper.traverse_surface import *
 
 class FindShiftableRow():
-    def __init__(self):
+    def __init__(self, state):
         self.state = 'run'
-        self.traverse_surface = TraverseOnSurfaceLog()
+        self.traverse_surface = TraverseOnSurfaceLog(state)
+        self.gstate = state
 
         self.min_y = 0
         self.max_y = 0
@@ -11,7 +12,7 @@ class FindShiftableRow():
 
     def reset(self):
         self.state = 'run'
-        self.traverse_surface = TraverseOnSurfaceLog()
+        self.traverse_surface = TraverseOnSurfaceLog(self.gstate)
 
         self.min_y = 0
         self.max_y = 0

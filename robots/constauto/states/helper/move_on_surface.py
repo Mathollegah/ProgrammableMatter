@@ -2,9 +2,10 @@ from robots.constauto.states.helper.traverse_surface import *
 
 
 class MoveOnSurface():
-    def __init__(self):
+    def __init__(self, state):
+        self.gstate = state
         self.state = 'move_up'
-        self.traverse_surface = TraverseOnSurfaceLog()
+        self.traverse_surface = TraverseOnSurfaceLog(self.gstate)
         self.last_move = None
         self.directions = []
         self.level_change_possible = False
@@ -16,7 +17,7 @@ class MoveOnSurface():
 
     def reset(self):
         self.state = 'move_up'
-        self.traverse_surface = TraverseOnSurfaceLog()
+        self.traverse_surface = TraverseOnSurfaceLog(self.gstate)
         self.last_move = None
         self.directions = []
         self.level_change_possible = False
