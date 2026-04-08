@@ -6,6 +6,7 @@ from direct.task import Task
 from potential import potential
 import random
 from game.game import Game, Dodecahedron
+from configgen.configgen import Configgen
 
 ##############################################################################
 
@@ -32,7 +33,7 @@ from panda3d.core import (
 
 
 
-class Simulator3D(ShowBase, Game):
+class Simulator3D(ShowBase, Game, Configgen):
     def __init__(self, player, config, state):
         if not config.onlygenerate:
             ShowBase.__init__(self)
@@ -49,15 +50,17 @@ class Simulator3D(ShowBase, Game):
         self.running = True
         self.count = 0
 
-        if config.load_file == "":
-            tmp = random.choice(state.dodecahedrons)
-            state.global_start_node = tmp
-
         self.interpolation_move = 0
         self.step = 0
         self.robot = player
         self.config = config
         self.state = state
+
+        self.build_new_configuration()
+
+        if config.load_file == "":
+            tmp = random.choice(state.dodecahedrons)
+            state.global_start_node = tmp
 
         tmp = Dodecahedron(self.state.global_start_node.x, self.state.global_start_node.y,
                            self.state.global_start_node.z)
@@ -312,3 +315,25 @@ class Simulator3D(ShowBase, Game):
                 self.grabbed_tile.z = self.z
 
         return Task.cont
+
+
+    def main(self):
+        if not self.config.onlygenerate or self.config.run_silent:
+            print("Count: " + str(self.state.global_move_count) + ", Potential_X: " + str(
+                self.state.potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(
+                self.state.potential.potential_z(self.grabbed_tile)))
+
+            #app.run()
+            while not self.config.visualize:
+                self.moveRobotNoAnimation()
+
+                if self.robot.state == 'terminate':
+                    print("Count: " + str(self.state.global_move_count) + ", Potential_X: " + str(self.state.potential.potential_x(self.grabbed_tile)) + ", " + "Potential_Z: " + str(self.state.potential.potential_z(self.grabbed_tile)))
+                    break
+
+
+            if self.config.visualize:
+                self.init_visualization()
+                self.run()
+
+            print("Number of Dodecahedrons: ", len(self.state.dodecahedrons))
