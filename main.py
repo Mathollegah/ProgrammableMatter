@@ -3,7 +3,7 @@ from robots.constauto.robot import *
 import potential.potential as potential
 import argparse
 from visualization.visualization import Simulator3D
-from game.game import Game
+from robots.RL.RL import RLRobot
 
 
 
@@ -46,5 +46,6 @@ if not config.trainmodel:
     app = Simulator3D(ConstRobot(state), config, state)
 
     app.main()
-#else: TBD
-#    game = Game()
+else:
+    app = RLRobot(config, state, max_steps=50)
+    app.learn(total_timesteps=50000)

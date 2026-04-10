@@ -156,7 +156,6 @@ class Game():
             state.global_start_node = tmp
 
         self.interpolation_move = 0
-        self.step = 0
         self.robot = player
         self.config = config
         self.state = state
@@ -186,7 +185,7 @@ class Game():
 
         self.hidden_tile = None
         self.hidden = False
-        if not config.onlygenerate:
+        if not config.onlygenerate and not config.trainmodel:
             self.scene = self.loader.loadModel("../../../../../objects/robot.glb")
             self.scene.reparentTo(self.render)
             self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
@@ -361,12 +360,14 @@ class Game():
             self.place_tile()
             return self.x, self.y, self.z
 
+        # TODO: remove this option since it is an intern state of the const robot
         if pos == 'place_and_hide_tile':
             self.grabbed_tile.hide = True
             self.hidden_tile = self.grabbed_tile
             self.place_tile()
             return self.x, self.y, self.z
 
+        # TODO: remove this option since it is an intern state of the const robot
         if pos == 'grab_tile_and_show_hidden_tile':
             self.hidden_tile.hide = False
             x = self.hidden_tile.x
