@@ -52,4 +52,4 @@ if not config.trainmodel:
     app.main()
 else:
     app = RLRobotLearn(config, state, max_steps=50)
-    app.learn(total_timesteps=50000)
+    app.learn(total_timesteps=5000, continue_learning=True)
