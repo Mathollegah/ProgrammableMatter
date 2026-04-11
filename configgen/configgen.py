@@ -110,6 +110,7 @@ class Configgen():
         elif self.config.load_file == "" and self.config.random_configuration:
             self.build_random_configuration()
         else:
+            self.state.dodecahedrons = []
             f = open(self.config.load_file, "r")
             txt = f.read()
             f.close()

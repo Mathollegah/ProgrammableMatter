@@ -1,4 +1,3 @@
-import globalvars
 import random
 
 class Dodecahedron:
@@ -154,6 +153,8 @@ class Game():
         if config.load_file == "":
             tmp = random.choice(state.dodecahedrons)
             state.global_start_node = tmp
+        else:
+            state.global_start_node = state.dodecahedrons[0]
 
         self.interpolation_move = 0
         self.robot = player
@@ -173,11 +174,7 @@ class Game():
 
         # Model complete, store in file
         if config.load_file == "":
-            f = open(config.store_file, "w")
-            f.writelines(str(self.x) + " " +  str(self.y) + " " + str(self.z) + " ")
-            for dodec in state.dodecahedrons:
-                f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
-            f.close()
+            self.store_state()
 
         self.x_next = 0
         self.y_next = 0
@@ -223,6 +220,13 @@ class Game():
             if x.z < z_min:
                 z_min = x.z
 
+
+    def store_state(self):
+        f = open(self.config.store_file, "w")
+        f.writelines(str(self.x) + " " +  str(self.y) + " " + str(self.z) + " ")
+        for dodec in self.state.dodecahedrons:
+            f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
+        f.close()
 
     def detect_occupied(self):
         for x in self.state.dodecahedrons:

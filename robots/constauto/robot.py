@@ -130,7 +130,7 @@ class ConstRobot():
                     if self.switched_orientation:
                         self.state = 'terminate'
                     else:
-                        self.state.min_z_coord = 10000
+                        self.gstate.min_z_coord = 10000
                         self.switched_orientation = True
                         force_exit = True
                         self.state = 'find_shiftable_row'
