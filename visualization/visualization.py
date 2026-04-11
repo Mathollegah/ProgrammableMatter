@@ -38,6 +38,15 @@ class Simulator3D(ShowBase, Game, Configgen):
         if not config.onlygenerate:
             ShowBase.__init__(self)
             simplepbr.init()
+
+        self.config = config
+        self.state = state
+
+        self.build_new_configuration()
+
+        # Call parent Game constructor
+        Game.__init__(self, player, config, state)
+
         self.accept('s', self.stop)
         self.accept('h', self.hide_tile)
         self.accept('b', self.hide_bounding_box)
@@ -47,64 +56,9 @@ class Simulator3D(ShowBase, Game, Configgen):
 
         self.accept('p', self.hide_not_pot_zero)
 
-        self.running = True
-        self.count = 0
-
-        self.interpolation_move = 0
-        self.step = 0
-        self.robot = player
-        self.config = config
-        self.state = state
-
-        self.build_new_configuration()
-
-        if config.load_file == "":
-            tmp = random.choice(state.dodecahedrons)
-            state.global_start_node = tmp
-
-        tmp = Dodecahedron(self.state.global_start_node.x, self.state.global_start_node.y,
-                           self.state.global_start_node.z)
-        self.state.dodecahedrons.append(tmp)
-        self.grabbed_tile = tmp
-
-        self.x = tmp.x
-        self.y = tmp.y
-        self.z = tmp.z
-
         self.inter_x = self.x
         self.inter_y = self.y
         self.inter_z = self.z
-
-        self.state.robot_coordinates = (self.x, self.y, self.z)
-
-        # Model complete, store in file
-        if self.config.load_file == "":
-            f = open(self.config.store_file, "w")
-            f.writelines(str(self.x) + " " +  str(self.y) + " " + str(self.z) + " ")
-            for dodec in self.state.dodecahedrons:
-                f.writelines(str(dodec.x) + " " + str(dodec.y)+ " " + str(dodec.z)+ " ")
-            f.close()
-
-        self.x_next = 0
-        self.y_next = 0
-        self.z_next = 0
-
-        self.hidden_tile = None
-        self.hidden = False
-        if not self.config.onlygenerate:
-            self.scene = self.loader.loadModel("./objects/robot.glb")
-            self.scene.reparentTo(self.render)
-            self.scene.setScale(4.0 / 8.0, 4.0 / 8.0, 4.0 / 8.0)
-            self.scene.setPos(self.x, self.y, self.z)
-            self.bounding_box = None
-
-            for x in self.state.dodecahedrons:
-                x.scene = self.loader.loadModel("./objects/dodeca.glb")
-                x.scene.reparentTo(self.render)
-                x.scene.setTransparency(True)
-                x.scene.setColor(1, 1, 1, 1.0)
-                x.scene.setScale(1.0/2.75, 1.0/2.75, 1.0/2.75)
-                x.scene.setPos(x.x, x.y, x.z)
 
         # Add bounding box
         x_max=-100
