@@ -6,6 +6,8 @@ from gymnasium import spaces
 from sb3_contrib import RecurrentPPO
 from game.game import Game, Dodecahedron
 from configgen.configgen import Configgen
+from robots.RL.reward.simple_potential import RewardSimplePotential
+from robots.RL.reward.constauto import RewardConstauto
 
 class RLRobotBase():
     def __init__(self, config, state, max_steps=10000):
@@ -102,6 +104,13 @@ class RLRobotLearn(RLRobotBase, gymnasium.Env, Game, Configgen):
         self.max_steps = max_steps
         self.steps = 0
 
+        if config.reward_function == "simple_potential":
+            self.reward_inst = RewardSimplePotential(self, config, state)
+        elif config.reward_function == "constauto":
+            self.reward_inst = RewardConstauto(self, config, state)
+        else:
+            raise ValueError("Invalid reward function specified")
+
     def reset(self, seed=None, options=None):
         self.build_new_configuration()
         Game.__init__(self, self, self.config, self.state)
@@ -112,24 +121,12 @@ class RLRobotLearn(RLRobotBase, gymnasium.Env, Game, Configgen):
 
         # Similar to moveRobot in game.py but callable from training class
     def step(self, action):
-        # Potential before move
-        x1 = self.state.potential.potential_x(self.grabbed_tile)
-        z1 = self.state.potential.potential_z(self.grabbed_tile)
-        reward2 = 0
-
         # Get next move from robot
         next_move = self.translate_action(action)
         occupied = self.detect_occupied()
+        self.reward_inst.predict()
         if (not next_move in ['grab_tile', 'place_tile']) or (next_move == 'grab_tile' and self.grabbed_tile is None and occupied) or (next_move == 'place_tile' and self.grabbed_tile is not None and not occupied):
-            if self.grabbed_tile is None and occupied and "U" in next_move:
-                reward2 += 1
-            elif not self.grabbed_tile is None and occupied and "D" in next_move:
-                reward2 += 1
-            
             self.x_next, self.y_next, self.z_next = self.act_move(next_move)
-
-            if next_move == 'grab_tile' and not self.grabbed_tile is None:
-                reward2 += 2
 
             self.x = self.x_next
             self.y = self.y_next
@@ -142,26 +139,15 @@ class RLRobotLearn(RLRobotBase, gymnasium.Env, Game, Configgen):
                 self.grabbed_tile.y = self.y
                 self.grabbed_tile.z = self.z
 
-        else:
-            reward2 -= 10
-
-        moves = self.detect_neighbors()
-        if moves == []:
-            reward2 -= 10
-
         # Update step count
         self.steps += 1
 
         # Update state
         self.compute_state_noargs()
 
-        # Calculate reward and check if done
-        x2 = self.state.potential.potential_x(self.grabbed_tile)
-        z2 = self.state.potential.potential_z(self.grabbed_tile)
-
-        reward = (x1-x2) + (z1-z2)-0.1 + reward2*0.2
-        done = (x2 == 0 and z2 == 0)
-        truncated = self.steps >= self.max_steps or moves == [] or (reward2 <= -10)
+        reward = self.reward_inst.reward(action)
+        done = self.reward_inst.done()
+        truncated = self.reward_inst.truncated()
         return self.RL_state.copy(), reward, done, truncated, {}
     
 
