@@ -29,4 +29,5 @@ class Config:
     onlygenerate = False
     run_silent = True
     trainmodel = False
+    reward_function = "constauto"
 

@@ -22,6 +22,7 @@ ap.add_argument("--logarithmic", default=False, help="Whether to use logarithmic
 ap.add_argument("--runsilent", default=False, help="Whether to use logarithmic or constant memory.")
 ap.add_argument("--trainmodel", default=False, help="Use this option to train an algorithm.")
 ap.add_argument("--useAI", default=False, help="Use the trained AI model.")
+ap.add_argument("--reward", default="constauto", help="Which reward function to use for training the AI model. Options are 'simple_potential' and 'constauto'.")
 
 args = vars(ap.parse_args())
 
@@ -41,6 +42,7 @@ state.logarithmic_memory = bool(args["logarithmic"])
 state.potential = pot
 config.run_silent = bool(args["runsilent"])
 config.trainmodel = bool(args["trainmodel"])
+config.reward_function = args["reward"]
 
 
 if not config.trainmodel:
